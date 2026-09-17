@@ -1,0 +1,22 @@
+{
+  "dt":0.25, 
+  "min_time":0.0, 
+  "maxt":0.2, 
+  "Escut":1e100,
+  "Fscut":1e100,
+  "distcut":0.0,
+  "Ncheck":1, 
+  "srt_temp":[300.0, 1800.0], 
+  "end_temp":[3000.0 ,1800.0], 
+  "amp_temp":[0.0   ,150.0], 
+  "per_temp":[5.0   ,50.0],
+  "end_dens":null,  
+  "amp_dens":null,
+  "per_dens":null,
+  "meta_path":"sampling/",
+  "ase_calculator":"alframework.ml_interfaces.hippynn_interface.HIPNN_ASE_load_ensemble",
+  "translate_to_center":false,
+  "MLMD_calculator_options":{},
+  "trajectory_frequency":0.0,
+  "trajectory_interval":100000
+}

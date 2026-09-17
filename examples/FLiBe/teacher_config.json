@@ -1,0 +1,7 @@
+{
+"model_path":"/lustre/orion/csc728/proj-shared/messerlyra/models/FLiNaK/model-190/",
+"ensemble_path":"/lustre/orion/csc728/proj-shared/messerlyra/models/FLiNaK/ensemble-190/",
+"energy_name":"energy",
+"force_name":"forces",
+"use_ensemble":true
+}
