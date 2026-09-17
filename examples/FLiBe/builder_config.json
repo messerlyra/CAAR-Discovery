@@ -1,0 +1,6 @@
+{   
+    "atom_charges":{"F": -1,"Li": 1,"Be": 2},
+    "target_num_atoms":840,
+    "min_distance":1.5,
+    "density_range":[2.0, 2.0]
+}
