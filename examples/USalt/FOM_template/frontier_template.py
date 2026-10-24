@@ -9,6 +9,8 @@ from parsl.launchers import SrunLauncher
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers import SimpleLauncher
 
+import task_counts  # keep finished tasks in ALF status output
+
 config_FOM = Config(
     executors=[
         HighThroughputExecutor(
