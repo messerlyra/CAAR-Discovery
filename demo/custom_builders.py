@@ -4,6 +4,7 @@ import random
 import os
 import numpy as np
 from parsl import python_app, bash_app
+from demo.timing.timing_client import time_task
 import json
 
 import ase
@@ -55,6 +56,7 @@ def atomic_system_builder_alt(atom_charges, target_num_atoms, min_distance, dens
     return ase.Atoms(atoms_type_list, coords, pbc=True, cell=np.diag([box_length]*3))
 
 @python_app(executors=['alf_sampler_executor'])
+@time_task(lambda moleculeid, **kws: f"build.{moleculeid}")
 def atomic_system_task(moleculeid, atom_charges, target_num_atoms, min_distance, density_range):
     """Atomic system task that will be fed to the sampler.
 
