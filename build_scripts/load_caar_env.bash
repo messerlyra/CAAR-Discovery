@@ -12,4 +12,4 @@ packpath=/lustre/orion/csc728/world-shared/messerlyra/envs/${packname}
 
 source activate ${packpath}
 
-export PYTHONPATH="$packpath-packages/ALF-CAAR/:$PYTHONPATH"
+export PYTHONPATH="$packpath-packages/ALF-CAAR/:${PYTHONPATH:-}"
