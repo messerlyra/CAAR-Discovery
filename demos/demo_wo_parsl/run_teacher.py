@@ -45,8 +45,8 @@ def main():
         print(f"Labeling molecule {i+1}/{len(molecules)}: {mol.get_moleculeid()}...")
         try:
             result = run_parsl(
-                #Rootstock_calculator_task,
-                hippynn_calculator_task,
+                Rootstock_calculator_task,
+                #hippynn_calculator_task,
                 molecule_object=mol,
                 QM_config=qm_config,
                 QM_scratch_dir=qm_scratch_dir,
