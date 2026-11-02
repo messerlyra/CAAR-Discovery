@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # MD node counts and per-stage node limits (-1 means no additional limit).
-NODE_COUNTS=(1 2)
+NODE_COUNTS=(1 2 4 8)
 NODE_MAX_MD=-1
 NODE_MAX_QM=64
 NODE_MAX_ML=1
@@ -15,10 +15,10 @@ if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--parallel" ) ]]; then
 fi
 if [[ $# -eq 1 ]]; then PARALLEL=1; fi
 
-readonly TEMPLATE_DIR="FOM_template_h5precomputed"
-readonly OUTPUT_ROOT="FOM_runs_debug9"
+readonly TEMPLATE_DIR="FOM_template"
+readonly OUTPUT_ROOT="FOM_runs"
 readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash"
-readonly TMUX_SESSION="alf_FOM_debug9"
+readonly TMUX_SESSION="alf_FOM"
 readonly MASTER_TEMPLATE="master_template.json"
 readonly MASTER_CONFIG="master_FOM.json"
 readonly FRONTIER_TEMPLATE="frontier_template.py"
