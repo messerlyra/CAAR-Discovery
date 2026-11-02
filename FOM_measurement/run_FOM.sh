@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # MD node counts and per-stage node limits (-1 means no additional limit).
-NODE_COUNTS=(1 2 4 8)
+NODE_COUNTS=(1 2)
 NODE_MAX_MD=-1
 NODE_MAX_QM=64
 NODE_MAX_ML=1
@@ -15,10 +15,10 @@ if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--parallel" ) ]]; then
 fi
 if [[ $# -eq 1 ]]; then PARALLEL=1; fi
 
-readonly TEMPLATE_DIR="FOM_template"
-readonly OUTPUT_ROOT="FOM_runs"
+readonly TEMPLATE_DIR="FOM_template_h5precomputed"
+readonly OUTPUT_ROOT="FOM_runs_debug9"
 readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash"
-readonly TMUX_SESSION="alf_FOM"
+readonly TMUX_SESSION="alf_FOM_debug9"
 readonly MASTER_TEMPLATE="master_template.json"
 readonly MASTER_CONFIG="master_FOM.json"
 readonly FRONTIER_TEMPLATE="frontier_template.py"
@@ -54,8 +54,16 @@ fi
 readonly BASE_DIR="$PWD"
 mkdir -p "$OUTPUT_ROOT"
 readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
+readonly RESULTS_DIR="$OUTPUT_ABS/results"
+readonly FIGURES_DIR="$OUTPUT_ABS/figures"
+mkdir -p "$RESULTS_DIR" "$FIGURES_DIR"
 readonly MANIFEST="$OUTPUT_ABS/FOM_manifest.tsv"
 readonly RUNNER="$OUTPUT_ABS/run_FOM_worker.sh"
+readonly COMPARE_SCRIPT="$BASE_DIR/compare_FOM.py"
+if [[ ! -f "$COMPARE_SCRIPT" ]]; then
+    echo "Error: comparison script not found: $COMPARE_SCRIPT" >&2
+    exit 1
+fi
 : > "$MANIFEST"
 
 # Prepare configurations and precomputed HDF5 copies for every test.
@@ -130,6 +138,9 @@ manifest=$1
 output_root=$2
 environment_script=$3
 parallel=$4
+compare_script=$5
+results_dir=$6
+figures_dir=$7
 
 run_one() {
     local test_name=$1 nnodes_md=$2 nnodes_qm=$3 nnodes_ml=$4
@@ -172,15 +183,50 @@ else
     done < "$manifest"
 fi
 printf 'FOM tests finished with status %s\n' "$failure"
+
+# Compare results only after every ALF run has finished successfully.
+comparison_log="$results_dir/FOM_comparison.log"
+if (( failure == 0 )); then
+    echo "All ALF tests completed successfully. Starting FOM comparison..."
+    node_counts=()
+    while IFS=$'\t' read -r test_name nnodes_md nnodes_qm nnodes_ml; do
+        node_counts+=("$nnodes_md")
+    done < "$manifest"
+
+    (
+        source "$environment_script" || exit 1
+        python -u "$compare_script" --alf_path "$output_root" --nodes "${node_counts[@]}" \
+            --results-dir "$results_dir" --figures-dir "$figures_dir"
+    ) > "$comparison_log" 2>&1
+    analysis_status=$?
+    if (( analysis_status != 0 )); then
+        echo "ERROR: FOM comparison failed (exit code $analysis_status). See: $comparison_log"
+        failure=$analysis_status
+    else
+        echo "FOM comparison completed successfully. See: $comparison_log"
+    fi
+else
+    echo "WARNING: One or more ALF tests failed. Skipping FOM comparison."
+fi
+printf 'Final FOM workflow status: %s\n' "$failure"
 exec bash --noprofile --norc
 WORKER
 chmod +x "$RUNNER"
 
-printf -v tmux_command '%q ' "$RUNNER" "$MANIFEST" "$OUTPUT_ABS" "$ENVIRONMENT_SCRIPT" "$PARALLEL"
+printf -v tmux_command '%q ' \
+    "$RUNNER" \
+    "$MANIFEST" \
+    "$OUTPUT_ABS" \
+    "$ENVIRONMENT_SCRIPT" \
+    "$PARALLEL" \
+    "$COMPARE_SCRIPT" \
+    "$RESULTS_DIR" \
+    "$FIGURES_DIR"
 tmux new-session -d -s "$TMUX_SESSION" -n "FOM_tests"
 tmux send-keys -t "$TMUX_SESSION:FOM_tests" "$tmux_command" C-m
 if (( PARALLEL )); then run_mode=parallel; else run_mode=sequential; fi
 echo "Started ${#NODE_COUNTS[@]} $run_mode FOM tests in tmux session: $TMUX_SESSION"
 echo "Attach with: tmux attach -t $TMUX_SESSION"
 echo "Logs are stored inside each test directory under: $OUTPUT_ROOT"
-
+echo "Comparison results: $RESULTS_DIR"
+echo "Figures: $FIGURES_DIR"
