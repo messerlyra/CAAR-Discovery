@@ -19,7 +19,7 @@ def main():
         qm_config = json.load(f)
 
     # Load molecules from the demo HDF5 store
-    h5_src = 'h5store/data-Li_Na_K_Rb_Cs_Be_Mg_Ca_Sr_Ba_F_Cl-0000.h5'
+    h5_src = os.path.abspath( master_config['h5_path'] )
     h5_dst = 'labeled_molecules.h5'
     if os.path.exists(h5_dst):
         raise FileExistsError(f"refusing to overwrite existing {h5_dst}")
