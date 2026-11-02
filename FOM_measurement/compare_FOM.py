@@ -1,23 +1,6 @@
 
 #!/usr/bin/env python3
-
-"""
-Compare ALF Figure of Merit (FOM) across different node counts.
-
-Outputs:
-    FOM_results.txt (inside each ALF directory)
-    FOM_comparison.csv
-    FOM_vs_nodes.png
-    FOM_scaling_efficiency.png
-    MD_time_vs_nodes.png
-    QM_time_vs_nodes.png
-    ML_time_vs_nodes.png
-    MD_time_vs_configs.png
-    QM_time_vs_configs.png
-    ML_time_vs_configs.png
-    Stage_percent_vs_nodes.png
-    Stage_percent_vs_configs.png
-"""
+"""Compare ALF FOM and extrapolated MD/QM/ML times across node counts."""
 
 import argparse
 import csv
@@ -27,86 +10,63 @@ import subprocess
 import sys
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+
+STAGES = {
+    "md": "MD Sampling",
+    "qm": "QM Labeling",
+    "ml": "ML Training",
+}
 
 
 def parse_duration(value):
     """Convert HH:MM:SS.ss to seconds."""
     hours, minutes, seconds = value.strip().split(":")
-    return (
-        int(hours) * 3600
-        + int(minutes) * 60
-        + float(seconds)
-    )
-
-
-def set_sparse_xticks(ax, values, max_ticks=6):
-    """Display a subset of actual x values to avoid overlapping labels."""
-    values = sorted(set(values))
-
-    if not values:
-        return
-
-    if len(values) <= max_ticks:
-        ticks = values
-    else:
-        indices = [
-            round(i * (len(values) - 1) / (max_ticks - 1))
-            for i in range(max_ticks)
-        ]
-        ticks = [values[i] for i in sorted(set(indices))]
-
-    ax.set_xticks(ticks)
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
 def extract_results(output):
     """Extract FOM, configuration counts, and extrapolated stage times."""
 
-    fom_patterns = [
-        r"FOM\s*\(components/hour\)\s*:\s*([\d,]+(?:\.\d+)?)",
-        r"FOM\s*\(comp/hour\)\s*:\s*([\d,]+(?:\.\d+)?)",
-    ]
-
-    fom = None
-
-    for pattern in fom_patterns:
-        match = re.search(pattern, output, re.IGNORECASE)
-        if match:
-            fom = float(match.group(1).replace(",", ""))
-            break
-
-    if fom is None:
-        raise ValueError("Could not extract FOM from analyzer output.")
-
-    section = re.search(
-        r"Stage Durations:\s*(.*?)(?:\n\s*Figure of Merit|\n\s*Time Distribution:|\Z)",
+    match = re.search(
+        r"FOM\s*\((?:components|comp)/hour\)\s*:\s*([\d,]+(?:\.\d+)?)",
         output,
-        re.DOTALL | re.IGNORECASE,
+        re.I,
     )
 
-    if section is None:
-        raise ValueError("Could not find Stage Durations section.")
+    if not match:
+        raise ValueError("Could not extract FOM from analyzer output.")
 
-    stage_text = section.group(1)
-
-    patterns = {
-        "md_time": r"MD Sampling\s*:\s*(\d+:\d+:[\d.]+)",
-        "qm_time": r"QM Labeling\s*:\s*(\d+:\d+:[\d.]+)",
-        "ml_time": r"ML Training\s*:\s*(\d+:\d+:[\d.]+)",
-        "total_time": r"Total\s*:\s*(\d+:\d+:[\d.]+)",
+    result = {
+        "fom": float(match.group(1).replace(",", ""))
     }
 
-    results = {"fom": fom}
+    section = re.search(
+        r"Stage Durations:\s*(.*?)(?:\n\s*(?:Figure of Merit|Time Distribution):|\Z)",
+        output,
+        re.S | re.I,
+    )
 
-    for key, pattern in patterns.items():
-        match = re.search(pattern, stage_text)
+    if not section:
+        raise ValueError("Could not find Stage Durations section.")
 
-        if match is None:
-            raise ValueError(f"Could not extract {key}.")
+    for key, label in [*STAGES.items(), ("total", "Total")]:
+        duration = re.search(
+            r"^\s*" + re.escape(label) + r"\s*:\s*(\d+:\d+:[\d.]+)",
+            section.group(1),
+            re.M,
+        )
 
-        results[key] = parse_duration(match.group(1))
+        if not duration:
+            raise ValueError(f"Could not extract {label} duration.")
 
-    # Extract configuration counts
+        result[f"{key}_time"] = parse_duration(
+            duration.group(1)
+        )
+
     count_patterns = {
         "md_trajectories": (
             r"Trajectories analyzed\s*:\s*([\d,]+)"
@@ -117,14 +77,16 @@ def extract_results(output):
     }
 
     for key, pattern in count_patterns.items():
-        match = re.search(pattern, output, re.IGNORECASE)
+        count = re.search(pattern, output, re.I)
 
-        if match is None:
-            raise ValueError(f"Could not extract {key}.")
+        if not count:
+            raise ValueError(
+                f"Could not extract {key} from analyzer output."
+            )
 
-        results[key] = int(match.group(1).replace(",", ""))
+        result[key] = int(count.group(1).replace(",", ""))
 
-    return results
+    return result
 
 
 def find_alf_directory(base_path, nodes):
@@ -132,8 +94,8 @@ def find_alf_directory(base_path, nodes):
     Find an ALF directory matching nodes_NMD_*.
 
     Example:
-        nodes_4MD_64QM_1ML
-        nodes_8MD_64QM_1ML
+        nodes_4MD_4QM_1ML
+        nodes_512MD_64QM_1ML
     """
     pattern = f"nodes_{nodes}MD_*"
 
@@ -149,8 +111,7 @@ def find_alf_directory(base_path, nodes):
 
     if len(matches) > 1:
         raise ValueError(
-            f"Multiple directories match {pattern}: "
-            + ", ".join(str(p) for p in matches)
+            f"Multiple directories match {pattern}: {matches}"
         )
 
     return matches[0]
@@ -162,8 +123,12 @@ def run_analysis(
     timestep,
     md_duration,
     epochs,
+    results_dir,
 ):
-    """Run analyze_FOM.py and save its unmodified output."""
+    """
+    Run analyze_FOM.py and save its original output
+    in the shared results directory.
+    """
 
     command = [
         sys.executable,
@@ -178,71 +143,87 @@ def run_analysis(
         str(epochs),
     ]
 
-    result = subprocess.run(
+    completed = subprocess.run(
         command,
         capture_output=True,
         text=True,
         check=False,
     )
 
-    output_file = alf_dir / "FOM_results.txt"
+    # Save individual ALF results in the shared results directory.
+    report = (
+        results_dir / f"FOM_results_{alf_dir.name}.txt"
+    )
 
-    with output_file.open("w") as f:
-        f.write(result.stdout)
+    report.write_text(
+        completed.stdout,
+        encoding="utf-8",
+    )
 
-        if result.returncode != 0:
-            f.write("\nAnalysis failed:\n")
-            f.write(result.stderr)
+    if completed.returncode != 0:
+        if completed.stderr:
+            error_file = (
+                results_dir / f"FOM_error_{alf_dir.name}.txt"
+            )
 
-    if result.returncode != 0:
+            error_file.write_text(
+                completed.stderr,
+                encoding="utf-8",
+            )
+
         raise RuntimeError(
             f"Analyzer failed for {alf_dir}: "
-            f"{result.stderr.strip()}"
+            f"{completed.stderr.strip()}"
         )
 
-    return extract_results(result.stdout)
+    return extract_results(completed.stdout)
 
 
 def calculate_scaling(results):
     """Calculate ideal FOM scaling and stage time percentages."""
 
-    results.sort(key=lambda item: item["nodes"])
+    results.sort(key=lambda r: r["nodes"])
 
     baseline = results[0]
+    base_nodes = baseline["nodes"]
+    base_fom = baseline["fom"]
 
-    baseline_nodes = baseline["nodes"]
-    baseline_fom = baseline["fom"]
+    if base_fom <= 0:
+        raise ValueError("Baseline FOM must be positive.")
 
-    for result in results:
-        nodes = result["nodes"]
+    for row in results:
+        nodes = row["nodes"]
 
-        ideal_fom = (
-            baseline_fom * nodes / baseline_nodes
+        row["ideal_fom"] = (
+            base_fom * nodes / base_nodes
         )
 
-        efficiency = (
-            100.0 * result["fom"] / ideal_fom
-            if ideal_fom > 0 else 0.0
+        row["efficiency_percent"] = (
+            100 * row["fom"] / row["ideal_fom"]
         )
 
-        result["ideal_fom"] = ideal_fom
-        result["efficiency_percent"] = efficiency
+        total = row["total_time"]
 
-        total = result["total_time"]
-
-        for stage in ("md", "qm", "ml"):
-            stage_time = result[f"{stage}_time"]
-
-            result[f"{stage}_time_hours"] = (
-                stage_time / 3600.0
+        if total <= 0:
+            raise ValueError(
+                f"Nonpositive total time for {nodes} nodes."
             )
 
-            result[f"{stage}_percent"] = (
-                100.0 * stage_time / total
-                if total > 0 else 0.0
-            )
+        row["total_time_hours"] = total / 3600
 
-        result["total_time_hours"] = total / 3600.0
+        for stage in STAGES:
+            duration = row[f"{stage}_time"]
+
+            if duration <= 0:
+                raise ValueError(
+                    f"Nonpositive {stage} time for {nodes} nodes."
+                )
+
+            row[f"{stage}_time_hours"] = duration / 3600
+
+            row[f"{stage}_percent"] = (
+                100 * duration / total
+            )
 
 
 def save_csv(results, output_file):
@@ -265,86 +246,105 @@ def save_csv(results, output_file):
         "ml_percent",
     ]
 
-    with output_file.open("w", newline="") as f:
+    with output_file.open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as handle:
+
         writer = csv.DictWriter(
-            f,
+            handle,
             fieldnames=columns,
         )
 
         writer.writeheader()
 
         for result in results:
-            row = {
-                "nodes": result["nodes"],
-                "directory": result["directory"],
+            row = {}
 
-                "md_trajectories": result["md_trajectories"],
-                "qm_calcs": result["qm_calcs"],
+            for key in columns:
+                value = result[key]
 
                 # FOM: no decimal places
-                "fom": f'{result["fom"]:.0f}',
-                "ideal_fom": f'{result["ideal_fom"]:.0f}',
+                if key in ("fom", "ideal_fom"):
+                    row[key] = f"{value:.0f}"
 
                 # Percentages: 5 significant figures
-                "efficiency_percent":
-                    f'{result["efficiency_percent"]:.5g}',
-
-                "md_percent":
-                    f'{result["md_percent"]:.5g}',
-                "qm_percent":
-                    f'{result["qm_percent"]:.5g}',
-                "ml_percent":
-                    f'{result["ml_percent"]:.5g}',
+                elif key.endswith("_percent"):
+                    row[key] = f"{value:.5g}"
 
                 # Hours: 3 significant figures
-                "md_time_hours":
-                    f'{result["md_time_hours"]:.3g}',
-                "qm_time_hours":
-                    f'{result["qm_time_hours"]:.3g}',
-                "ml_time_hours":
-                    f'{result["ml_time_hours"]:.3g}',
-                "total_time_hours":
-                    f'{result["total_time_hours"]:.3g}',
-            }
+                elif key.endswith("_hours"):
+                    row[key] = f"{value:.3g}"
+
+                else:
+                    row[key] = value
 
             writer.writerow(row)
+
+
+def set_sparse_xticks(ax, values, max_ticks=6):
+    """Keep a readable subset of measured x coordinates."""
+
+    values = sorted(set(values))
+
+    if len(values) > max_ticks:
+        indices = [
+            round(i * (len(values) - 1) / (max_ticks - 1))
+            for i in range(max_ticks)
+        ]
+
+        values = [
+            values[i]
+            for i in sorted(set(indices))
+        ]
+
+    ax.set_xticks(values)
+
+
+def setup_plot(ax, nodes, ylabel, title):
+    """Apply common formatting to node-count plots."""
+
+    ax.set_xlabel("Number of Nodes")
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
+    set_sparse_xticks(ax, nodes)
+
+    ax.set_ylim(bottom=0)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
 
 
 def plot_fom(results, output_file):
     """Plot measured FOM and ideal linear scaling."""
 
     nodes = [r["nodes"] for r in results]
-    fom = [r["fom"] for r in results]
-    ideal = [r["ideal_fom"] for r in results]
 
     fig, ax = plt.subplots(figsize=(8, 5))
 
     ax.plot(
         nodes,
-        fom,
+        [r["fom"] for r in results],
         "o-",
         linewidth=2,
-        markersize=7,
         label="Measured FOM",
     )
 
     ax.plot(
         nodes,
-        ideal,
+        [r["ideal_fom"] for r in results],
         "--",
         linewidth=2,
         label="Ideal Linear Scaling",
     )
 
-    ax.set_xlabel("Number of Nodes")
-    ax.set_ylabel("Force Components Learned per Hour")
-    ax.set_title("ALF Figure of Merit Scaling")
-
-    ax.set_ylim(bottom=0)
-    set_sparse_xticks(ax, nodes, max_ticks=6)
-
-    ax.grid(True, alpha=0.3)
-    ax.legend()
+    setup_plot(
+        ax,
+        nodes,
+        "Force Components Learned per Hour",
+        "ALF Figure of Merit Scaling",
+    )
 
     fig.tight_layout()
     fig.savefig(output_file, dpi=300)
@@ -355,38 +355,30 @@ def plot_efficiency(results, output_file):
     """Plot overall FOM scaling efficiency."""
 
     nodes = [r["nodes"] for r in results]
-    efficiency = [
-        r["efficiency_percent"] for r in results
-    ]
 
     fig, ax = plt.subplots(figsize=(8, 5))
 
     ax.plot(
         nodes,
-        efficiency,
+        [r["efficiency_percent"] for r in results],
         "o-",
         linewidth=2,
-        markersize=7,
         label="Measured Efficiency",
     )
 
     ax.axhline(
         100,
-        linestyle="--",
-        linewidth=2,
         color="gray",
+        linestyle="--",
         label="Ideal Linear Scaling (100%)",
     )
 
-    ax.set_xlabel("Number of Nodes")
-    ax.set_ylabel("Scaling Efficiency (%)")
-    ax.set_title("ALF FOM Scaling Efficiency")
-
-    ax.set_ylim(bottom=0)
-    set_sparse_xticks(ax, nodes, max_ticks=6)
-
-    ax.grid(True, alpha=0.3)
-    ax.legend()
+    setup_plot(
+        ax,
+        nodes,
+        "Scaling Efficiency (%)",
+        "ALF FOM Scaling Efficiency",
+    )
 
     fig.tight_layout()
     fig.savefig(output_file, dpi=300)
@@ -396,39 +388,24 @@ def plot_efficiency(results, output_file):
 def plot_stage_time(results, stage, output_file):
     """Plot extrapolated stage time versus number of nodes."""
 
-    labels = {
-        "md": "MD Sampling",
-        "qm": "QM Labeling",
-        "ml": "ML Training",
-    }
-
     nodes = [r["nodes"] for r in results]
-
-    times = [
-        r[f"{stage}_time_hours"]
-        for r in results
-    ]
 
     fig, ax = plt.subplots(figsize=(8, 5))
 
     ax.plot(
         nodes,
-        times,
+        [r[f"{stage}_time_hours"] for r in results],
         "o-",
         linewidth=2,
-        markersize=7,
-        label=labels[stage],
+        label="Measured Extrapolated Time",
     )
 
-    ax.set_xlabel("Number of Nodes")
-    ax.set_ylabel("Extrapolated Time (hours)")
-    ax.set_title(f"{labels[stage]} Execution Time")
-
-    ax.set_ylim(bottom=0)
-    set_sparse_xticks(ax, nodes, max_ticks=6)
-
-    ax.grid(True, alpha=0.3)
-    ax.legend()
+    setup_plot(
+        ax,
+        nodes,
+        "Extrapolated Time (hours)",
+        f"{STAGES[stage]} Time vs Nodes",
+    )
 
     fig.tight_layout()
     fig.savefig(output_file, dpi=300)
@@ -436,13 +413,7 @@ def plot_stage_time(results, stage, output_file):
 
 
 def plot_stage_configs(results, stage, output_file):
-    """Plot extrapolated stage time versus number of configurations."""
-
-    labels = {
-        "md": "MD Sampling",
-        "qm": "QM Labeling",
-        "ml": "ML Training",
-    }
+    """Plot stage time against extrapolated QM configurations."""
 
     data = sorted(
         (
@@ -463,15 +434,17 @@ def plot_stage_configs(results, stage, output_file):
         "o-",
         linewidth=2,
         markersize=7,
-        label=labels[stage],
+        label=STAGES[stage],
     )
 
     ax.set_xlabel("Number of Configurations")
     ax.set_ylabel("Extrapolated Time (hours)")
-    ax.set_title(f"{labels[stage]} Execution Time")
+    ax.set_title(
+        f"{STAGES[stage]} Time vs Configurations"
+    )
 
     ax.set_ylim(bottom=0)
-    set_sparse_xticks(ax, configs, max_ticks=6)
+    set_sparse_xticks(ax, configs)
 
     ax.grid(True, alpha=0.3)
     ax.legend()
@@ -482,58 +455,50 @@ def plot_stage_configs(results, stage, output_file):
 
 
 def plot_stage_percent(results, x_type, output_file):
-    """Plot MD, QM, and ML contributions to total execution time."""
+    """Plot the percentage of total time spent in each stage."""
 
-    if x_type == "nodes":
-        x_values = [r["nodes"] for r in results]
-        xlabel = "Number of Nodes"
-
-    elif x_type == "configs":
-        x_values = [r["qm_calcs"] for r in results]
-        xlabel = "Number of Configurations"
-
-    else:
-        raise ValueError(f"Invalid x_type: {x_type}")
-
-    sorted_results = sorted(
-        zip(x_values, results),
-        key=lambda item: item[0],
+    x_key = (
+        "nodes"
+        if x_type == "nodes"
+        else "qm_calcs"
     )
 
-    x_values = [item[0] for item in sorted_results]
-    data = [item[1] for item in sorted_results]
+    data = sorted(
+        results,
+        key=lambda r: r[x_key],
+    )
 
-    stages = {
-        "md": ("MD Sampling", "tab:blue"),
-        "qm": ("QM Labeling", "tab:orange"),
-        "ml": ("ML Training", "tab:green"),
-    }
+    xs = [r[x_key] for r in data]
 
     fig, ax = plt.subplots(figsize=(8, 5))
 
-    for stage, (label, color) in stages.items():
-
-        percentages = [
-            r[f"{stage}_percent"]
-            for r in data
-        ]
-
+    for stage, color in [
+        ("md", "tab:blue"),
+        ("qm", "tab:orange"),
+        ("ml", "tab:green"),
+    ]:
         ax.plot(
-            x_values,
-            percentages,
+            xs,
+            [r[f"{stage}_percent"] for r in data],
             "o-",
             linewidth=2,
             markersize=7,
             color=color,
-            label=label,
+            label=STAGES[stage],
         )
 
-    ax.set_xlabel(xlabel)
+    ax.set_xlabel(
+        "Number of Nodes"
+        if x_type == "nodes"
+        else "Number of Configurations"
+    )
+
     ax.set_ylabel("Fraction of Total Time (%)")
     ax.set_title("ALF Workflow Time Distribution")
 
     ax.set_ylim(0, 100)
-    set_sparse_xticks(ax, x_values, max_ticks=6)
+
+    set_sparse_xticks(ax, xs)
 
     ax.grid(True, alpha=0.3)
     ax.legend()
@@ -546,7 +511,7 @@ def plot_stage_percent(results, x_type, output_file):
 def main():
 
     parser = argparse.ArgumentParser(
-        description="Compare ALF FOM across node counts."
+        description="Compare ALF FOM and MD/QM/ML scaling."
     )
 
     parser.add_argument(
@@ -561,7 +526,7 @@ def main():
         type=int,
         nargs="+",
         required=True,
-        help="List of node counts to compare.",
+        help="Node counts to compare.",
     )
 
     parser.add_argument(
@@ -586,10 +551,26 @@ def main():
     )
 
     parser.add_argument(
+        "--figures-dir",
+        type=Path,
+        default=None,
+        help="Figure output directory (default: alf_path/figures).",
+    )
+
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=None,
+        help="Results directory (default: alf_path/results).",
+    )
+
+    parser.add_argument(
         "--analyzer",
         type=Path,
-        default=Path(__file__).resolve().parent
-        / "analyze_FOM.py",
+        default=(
+            Path(__file__).resolve().parent
+            / "analyze_FOM.py"
+        ),
         help="Path to analyze_FOM.py.",
     )
 
@@ -598,20 +579,34 @@ def main():
     base_path = args.alf_path.expanduser().resolve()
     analyzer = args.analyzer.expanduser().resolve()
 
+    figures_dir = (
+        args.figures_dir.expanduser().resolve()
+        if args.figures_dir is not None
+        else base_path / "figures"
+    )
+
+    results_dir = (
+        args.results_dir.expanduser().resolve()
+        if args.results_dir is not None
+        else base_path / "results"
+    )
+
     if not base_path.is_dir():
-        parser.error(f"Directory not found: {base_path}")
+        parser.error(
+            f"Directory not found: {base_path}"
+        )
 
     if not analyzer.is_file():
-        parser.error(f"Analyzer not found: {analyzer}")
+        parser.error(
+            f"Analyzer not found: {analyzer}"
+        )
 
-    if any(n <= 0 for n in args.nodes):
+    if not args.nodes or any(n <= 0 for n in args.nodes):
         parser.error("Node counts must be positive.")
 
-    if (
-        not math.isfinite(args.timestep)
-        or not math.isfinite(args.md_duration)
-        or args.timestep <= 0
-        or args.md_duration <= 0
+    if any(
+        not math.isfinite(x) or x <= 0
+        for x in (args.timestep, args.md_duration)
     ):
         parser.error(
             "Timestep and MD duration must be finite positive numbers."
@@ -620,10 +615,18 @@ def main():
     if args.epochs <= 0:
         parser.error("Epoch count must be positive.")
 
+    # Create the results directory before running analyses.
+    results_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     results = []
 
-    print("\nALF FOM Comparison")
-    print("=" * 60)
+    print(
+        "\nALF FOM Comparison\n"
+        + "=" * 60
+    )
 
     for nodes in sorted(set(args.nodes)):
 
@@ -631,73 +634,103 @@ def main():
 
         try:
             alf_dir = find_alf_directory(
-                base_path, nodes
+                base_path,
+                nodes,
             )
 
-            analysis = run_analysis(
-                analyzer=analyzer,
-                alf_dir=alf_dir,
-                timestep=args.timestep,
-                md_duration=args.md_duration,
-                epochs=args.epochs,
+            result = run_analysis(
+                analyzer,
+                alf_dir,
+                args.timestep,
+                args.md_duration,
+                args.epochs,
+                results_dir,
             )
 
-            analysis["nodes"] = nodes
-            analysis["directory"] = alf_dir.name
+            result.update(
+                nodes=nodes,
+                directory=alf_dir.name,
+            )
 
-            results.append(analysis)
+            results.append(result)
 
+            print(f"  Directory : {alf_dir.name}")
+            print(f"  FOM       : {result['fom']:.0f}")
             print(
-                f"  Directory : {alf_dir.name}\n"
-                f"  FOM       : {analysis['fom']:.0f}\n"
-                f"  MD time   : {analysis['md_time']/3600:.3g} h\n"
-                f"  QM time   : {analysis['qm_time']/3600:.3g} h\n"
-                f"  ML time   : {analysis['ml_time']/3600:.3g} h"
+                f"  MD time   : "
+                f"{result['md_time'] / 3600:.3g} h"
+            )
+            print(
+                f"  QM time   : "
+                f"{result['qm_time'] / 3600:.3g} h"
+            )
+            print(
+                f"  ML time   : "
+                f"{result['ml_time'] / 3600:.3g} h"
             )
 
         except Exception as exc:
-            print(f"  ERROR: {exc}", file=sys.stderr)
-            continue
+            print(
+                f"  ERROR: {exc}",
+                file=sys.stderr,
+            )
 
     if not results:
-        parser.error("No successful analyses were found.")
+        parser.error(
+            "No successful analyses were found."
+        )
 
     calculate_scaling(results)
 
-    csv_file = base_path / "FOM_comparison.csv"
-    fom_plot = base_path / "FOM_vs_nodes.png"
-    efficiency_plot = (
-        base_path / "FOM_scaling_efficiency.png"
+    figures_dir.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
-    save_csv(results, csv_file)
-    plot_fom(results, fom_plot)
-    plot_efficiency(results, efficiency_plot)
+    save_csv(
+        results,
+        results_dir / "FOM_comparison.csv",
+    )
 
-    # Stage execution times versus number of nodes
-    for stage in ("md", "qm", "ml"):
-        stage_plot = (
-            base_path / f"{stage.upper()}_time_vs_nodes.png"
+    plot_fom(
+        results,
+        figures_dir / "FOM_vs_nodes.png",
+    )
+
+    plot_efficiency(
+        results,
+        figures_dir / "FOM_scaling_efficiency.png",
+    )
+
+    for stage in STAGES:
+
+        plot_stage_time(
+            results,
+            stage,
+            figures_dir
+            / f"{stage.upper()}_time_vs_nodes.png",
         )
-        plot_stage_time(results, stage, stage_plot)
 
-    # Stage execution times versus number of configurations
-    for stage in ("md", "qm", "ml"):
-        stage_plot = (
-            base_path / f"{stage.upper()}_time_vs_configs.png"
+        plot_stage_configs(
+            results,
+            stage,
+            figures_dir
+            / f"{stage.upper()}_time_vs_configs.png",
         )
-        plot_stage_configs(results, stage, stage_plot)
 
-    # Stage percentage contributions
     for x_type in ("nodes", "configs"):
-        output_file = (
-            base_path / f"Stage_percent_vs_{x_type}.png"
-        )
-        plot_stage_percent(results, x_type, output_file)
 
-    print("\n" + "=" * 60)
-    print("Comparison Summary")
-    print("=" * 60)
+        plot_stage_percent(
+            results,
+            x_type,
+            figures_dir
+            / f"Stage_percent_vs_{x_type}.png",
+        )
+
+    print(
+        "\nComparison Summary\n"
+        + "=" * 60
+    )
 
     print(
         f"{'Nodes':>8} "
@@ -706,37 +739,25 @@ def main():
         f"{'Efficiency':>12}"
     )
 
-    for result in results:
+    for row in results:
         print(
-            f"{result['nodes']:8d} "
-            f"{result['fom']:14.0f} "
-            f"{result['ideal_fom']:14.0f} "
-            f"{result['efficiency_percent']:11.2f}%"
-        )
-
-    print("\nGenerated files:")
-    print(f"  {csv_file}")
-    print(f"  {fom_plot}")
-    print(f"  {efficiency_plot}")
-
-    for stage in ("md", "qm", "ml"):
-        print(
-            f"  {base_path / f'{stage.upper()}_time_vs_nodes.png'}"
-        )
-
-    for stage in ("md", "qm", "ml"):
-        print(
-            f"  {base_path / f'{stage.upper()}_time_vs_configs.png'}"
-        )
-
-    for x_type in ("nodes", "configs"):
-        print(
-            f"  {base_path / f'Stage_percent_vs_{x_type}.png'}"
+            f"{row['nodes']:8d} "
+            f"{row['fom']:14.0f} "
+            f"{row['ideal_fom']:14.0f} "
+            f"{row['efficiency_percent']:11.2f}%"
         )
 
     print(
-        "\nIndividual FOM_results.txt files are saved "
-        "inside each analyzed ALF directory."
+        f"\nCSV results: "
+        f"{results_dir / 'FOM_comparison.csv'}"
+    )
+
+    print(
+        f"Figures directory: {figures_dir}"
+    )
+
+    print(
+        f"Individual FOM reports: {results_dir}"
     )
 
 
