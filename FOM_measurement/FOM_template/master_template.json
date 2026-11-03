@@ -29,7 +29,7 @@
   "save_h5_threshold": NCONFIGS_QM_MINUS_ONE,
   "parallel_samplers": NCONFIGS_MD,
   "bootstrap_set": NCONFIGS_QM,
-  "parsl_configuration": "frontier.config",
+  "parsl_configuration": "frontier.config_standard",
   "parsl_debug_configuration": "frontier.config_debug",
   "gpus_per_node": 8,
   "QM_scratch_dir": "QM",

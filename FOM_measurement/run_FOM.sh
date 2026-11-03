@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-
- 1. [ ] Update run_FOM.sh to remove template-related logic (sed substitutions and file copying).
- 2. [ ] Update the run_one function in run_FOM.sh to export NNODES_QM, NNODES_ML, and NNODES_MD.
-
-
 # MD node counts and per-stage node limits (-1 means no additional limit).
 NODE_COUNTS=(1 2 4 8)
 NODE_MAX_MD=-1
@@ -148,6 +143,11 @@ run_one() {
     local test_name=$1 nnodes_md=$2 nnodes_qm=$3 nnodes_ml=$4
     local test_dir="$output_root/$test_name"
     local log_path="$test_dir/alf_FOM_${test_name}.log"
+
+    export NNODES_MD=$nnodes_md
+    export NNODES_QM=$nnodes_qm
+    export NNODES_ML=$nnodes_ml
+
     (
         cd "$test_dir" || exit 1
         source "$environment_script" || exit 1
