@@ -151,7 +151,7 @@ run_one() {
     (
         cd "$test_dir" || exit 1
         source "$environment_script" || exit 1
-        export PYTHONPATH="$BASE_DIR/src:$PYTHONPATH"
+        export PYTHONPATH="$BASE_DIR/../src:$PYTHONPATH"
         export FOM_NODE_COUNT="$nnodes_md"
         echo "Starting FOM test: $nnodes_md MD node(s), $nnodes_qm QM node(s), $nnodes_ml ML node(s) at $(date -Is)"
         python -u -m alframework --master master_FOM.json
@@ -177,7 +177,7 @@ else
         run_one "$test_name" "$nnodes_md" "$nnodes_qm" "$nnodes_ml" || failure=1
         # Preserve cleanup of leftover ML Slurm jobs after sequential tests.
         job_name="ML_${nnodes_md}nodes"
-        mapfile -t job_ids < <(squeue -h -u messerlyra -n "$job_name" -o '%A')
+        mapfile -t job_ids < <(squeue -h -u $USER -n "$job_name" -o '%A')
         if (( ${#job_ids[@]} > 0 )); then
             scancel "${job_ids[@]}"
         fi
@@ -198,7 +198,7 @@ if (( failure == 0 )); then
 
     (
         source "$environment_script" || exit 1
-        export PYTHONPATH="$BASE_DIR/src:$PYTHONPATH"
+        export PYTHONPATH="$BASE_DIR/../src:$PYTHONPATH"
         python -u "$compare_script" --alf_path "$output_root" --nodes "${node_counts[@]}" \
             --results-dir "$results_dir" --figures-dir "$figures_dir"
     ) > "$comparison_log" 2>&1
