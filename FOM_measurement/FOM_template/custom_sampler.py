@@ -8,13 +8,14 @@ import time
 from ase import Atoms
 import pickle as pkl
 from parsl import python_app, bash_app
+from demo.timing.timing_client import time_task
 
 from alframework.tools.tools import annealing_schedule
 from alframework.tools.tools import load_module_from_config
 from alframework.samplers.ASE_ensemble_constructor import MLMD_calculator
 from alframework.tools.tools import build_input_dict
 from alframework.tools.molecules_class import MoleculesObject
-    
+
 
 #For now I will take a dictionary with all sample parameters.
 #We may want to make this explicit. Ying Wai, what do you think? 
@@ -218,6 +219,7 @@ def mlmd_sampling(molecule_object, ase_calculator, dt, maxt, Escut, Fscut, Nchec
 
 
 @python_app(executors=['alf_sampler_executor'])
+@time_task(lambda mol, **kws: f"{mol.get_moleculeid()}")
 def simple_mlmd_sampling_task(molecule_object, sampler_config, model_path, current_model_id, gpus_per_node):
     """ A simple implementation of uncertanty based MD sampling.
 
