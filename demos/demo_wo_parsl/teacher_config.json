@@ -1,7 +1,7 @@
 {
 "checkpoint":"uma-s-1p2",
 "use_ensemble":true,
-"ensemble_path":"ensembles/ensemble-0000/",
+"ensemble_path":"../../demos/demo_w_parsl/system_000001_n14_c-Li-Na-K-Rb-Cs-Be-Mg-Ca-Sr-Ba-Zn-Zr_a-F-Cl/ensembles/ensemble-0000/",
 "model_path":"models",
 "energy_name":"energy",
 "force_name":"forces",

@@ -13,7 +13,10 @@ from custom_sampling import simple_mlmd_sampling_task
 from tools import run_parsl, build_molecule
 
 def main():
-    # Load config
+    with open('master_config.json', 'r') as f:
+        master_config = json.load(f)
+
+    # Load configs
     with open('mlmd_config.json', 'r') as f:
         sampler_config = json.load(f)
     
@@ -25,7 +28,7 @@ def main():
 
     # Parameters
     # Use the ensemble models found in the demo directory
-    model_path = 'ensembles/ensemble-{:04d}'
+    model_path = os.path.abspath( master_config['model_path'] )
     current_model_id = 0
     gpus_per_node = 1
 
