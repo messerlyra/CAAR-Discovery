@@ -130,6 +130,7 @@ def mlmd_sampling(molecule_object, ase_calculator, dt, maxt, Escut, Fscut, Nchec
                                      }
                 failed = True
                 ###RAM: For CAAR tests, no longer breaking on fail
+                dyn.dt = 0.0 ###No longer take timesteps to avoid overflows
                 #break
 
         # Set the temperature
