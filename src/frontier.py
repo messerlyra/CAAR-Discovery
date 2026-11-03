@@ -23,6 +23,10 @@ NNODES_MD = get_env_int('NNODES_MD', 1)
 NCONFIGS_QM = NNODES_QM * 8
 NCONFIGS_MD = NNODES_MD * 8
 
+WALLTIME_QM = get_env_str('WALLTIME_QM', '0:30:00')
+WALLTIME_ML = get_env_str('WALLTIME_ML', '0:15:00')
+WALLTIME_MD = get_env_str('WALLTIME_MD', '0:15:00')
+
 config_standard = Config(
     executors=[
         HighThroughputExecutor(
@@ -34,7 +38,7 @@ config_standard = Config(
                 max_blocks=1,
                 scheduler_options=f'#SBATCH --nodes={NNODES_QM} --ntasks-per-node=8 -p batch -J QM_{NNODES_QM}nodes -A csc728',
                 launcher=SrunLauncher(overrides=f'--ntasks {NCONFIGS_QM} -c 7 --gpus-per-task=1 --gpu-bind=closest'),
-                walltime='0:30:00',
+                walltime=WALLTIME_QM,
                 cmd_timeout=30,
             ),
         ),
@@ -47,7 +51,7 @@ config_standard = Config(
                 nodes_per_block=1,
                 scheduler_options=f'#SBATCH --nodes={NNODES_ML} --ntasks-per-node=1 -p batch -J ML_{NNODES_ML}nodes -A csc728',
                 launcher=SrunLauncher(overrides=f'--ntasks 1 -c 56 --gpus-per-task=8 --gpu-bind=closest'),
-                walltime='0:15:00',
+                walltime=WALLTIME_ML,
                 cmd_timeout=30,
             ),
         ),
@@ -60,7 +64,7 @@ config_standard = Config(
                 max_blocks=1,
                 scheduler_options=f'#SBATCH --nodes={NNODES_MD} --ntasks-per-node=8 -p batch -J MD_{NNODES_MD}nodes -A csc728',
                 launcher=SrunLauncher(overrides=f'--ntasks {NCONFIGS_MD} -c 7 --gpus-per-task=1 --gpu-bind=closest'),
-                walltime='0:15:00',
+                walltime=WALLTIME_MD,
                 cmd_timeout=30,
             ),
         )

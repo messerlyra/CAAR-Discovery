@@ -139,6 +139,8 @@ compare_script=$5
 results_dir=$6
 figures_dir=$7
 
+export CAAR_TIMING_SERVER="tcp://login01:12710"
+
 run_one() {
     local test_name=$1 nnodes_md=$2 nnodes_qm=$3 nnodes_ml=$4
     local test_dir="$output_root/$test_name"

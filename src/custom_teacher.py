@@ -24,7 +24,7 @@ import torch
 import time
 
 @python_app(executors=['alf_QM_executor'])
-@time_task(lambda mol, *args, **kws: f"hippynn.{mol.get_moleculeid()}")
+@time_task(lambda molecule_object, *args, **kws: f"hippynn.{molecule_object.get_moleculeid()}")
 def hippynn_calculator_task(molecule_object,QM_config,QM_scratch_dir,properties_list):
 
     assert isinstance(molecule_object, MoleculesObject), 'molecule_object must be an instance of MoleculesObject'
@@ -117,7 +117,7 @@ def hippynn_calculator_task(molecule_object,QM_config,QM_scratch_dir,properties_
 from rootstock import RootstockCalculator
 
 @python_app(executors=['alf_QM_executor'])
-@time_task(lambda mol: f"rootstock.{mol.get_moleculeid()}")
+@time_task(lambda molecule_object, *args, **kws: f"rootstock.{molecule_object.get_moleculeid()}")
 def Rootstock_calculator_task(molecule_object,QM_config,QM_scratch_dir,properties_list):
 
     assert isinstance(molecule_object, MoleculesObject), 'molecule_object must be an instance of MoleculesObject'

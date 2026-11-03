@@ -94,7 +94,10 @@ def time_task(task_id_func):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            task_id = task_id_func(*args, **kwargs)
+            try:
+              task_id = task_id_func(*args, **kwargs)
+            except Exception:
+              task_id = 'unknown'
             report_task_status(task_id, "start")
             try:
                 result = func(*args, **kwargs)
