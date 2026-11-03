@@ -1,0 +1,112 @@
+import os
+import parsl
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_interface
+
+# For IC/NERSC:
+from parsl.providers import SlurmProvider
+from parsl.launchers import SrunLauncher
+from parsl.launchers import SingleNodeLauncher
+from parsl.launchers import SimpleLauncher
+
+def get_env_int(key, default):
+    return int(os.getenv(key, default))
+
+def get_env_str(key, default):
+    return os.getenv(key, default)
+
+# Dynamic values from environment variables
+NNODES_QM = get_env_int('NNODES_QM', 1)
+NNODES_ML = get_env_int('NNODES_ML', 1)
+NNODES_MD = get_env_int('NNODES_MD', 1)
+NCONFIGS_QM = NNODES_QM * 8
+NCONFIGS_MD = NNODES_MD * 8
+
+config_standard = Config(
+    executors=[
+        HighThroughputExecutor(
+            label='alf_QM_executor',
+            max_workers_per_node=1,
+            provider=SlurmProvider(
+                init_blocks=0,
+                min_blocks=0,
+                max_blocks=1,
+                scheduler_options=f'#SBATCH --nodes={NNODES_QM} --ntasks-per-node=8 -p batch -J QM_{NNODES_QM}nodes -A csc728',
+                launcher=SrunLauncher(overrides=f'--ntasks {NCONFIGS_QM} -c 7 --gpus-per-task=1 --gpu-bind=closest'),
+                walltime='0:30:00',
+                cmd_timeout=30,
+            ),
+        ),
+        HighThroughputExecutor(
+            label='alf_ML_executor',
+            provider=SlurmProvider(
+                init_blocks=0,
+                min_blocks=0,
+                max_blocks=1,
+                nodes_per_block=1,
+                scheduler_options=f'#SBATCH --nodes={NNODES_ML} --ntasks-per-node=1 -p batch -J ML_{NNODES_ML}nodes -A csc728',
+                launcher=SrunLauncher(overrides=f'--ntasks 1 -c 56 --gpus-per-task=8 --gpu-bind=closest'),
+                walltime='0:15:00',
+                cmd_timeout=30,
+            ),
+        ),
+        HighThroughputExecutor(
+            label='alf_sampler_executor',
+            max_workers_per_node=1,
+            provider=SlurmProvider(
+                init_blocks=0,
+                min_blocks=0,
+                max_blocks=1,
+                scheduler_options=f'#SBATCH --nodes={NNODES_MD} --ntasks-per-node=8 -p batch -J MD_{NNODES_MD}nodes -A csc728',
+                launcher=SrunLauncher(overrides=f'--ntasks {NCONFIGS_MD} -c 7 --gpus-per-task=1 --gpu-bind=closest'),
+                walltime='0:15:00',
+                cmd_timeout=30,
+            ),
+        )
+    ]
+)
+
+config_debug = Config(
+    executors=[
+        HighThroughputExecutor(
+            label='alf_QM_executor',
+            provider=SlurmProvider(
+                init_blocks=0,
+                min_blocks=0,
+                max_blocks=1,
+                nodes_per_block=1,
+                scheduler_options='#SBATCH --nodes=1 --ntasks-per-node=1 -p batch -J QM_debug -A csc728',
+                launcher=SimpleLauncher(),
+                walltime='0:10:00',
+                cmd_timeout=5,
+            ),
+        ),
+        HighThroughputExecutor(
+            label='alf_ML_executor',
+            provider=SlurmProvider(
+                init_blocks=0,
+                min_blocks=0,
+                max_blocks=1,
+                nodes_per_block=1,
+                scheduler_options='#SBATCH --nodes=1 -p batch -J ML_debug -A csc728 --qos=debug',
+                launcher=SingleNodeLauncher(),
+                walltime='0:05:00',
+                cmd_timeout=5,
+            ),
+        ),
+        HighThroughputExecutor(
+            label='alf_sampler_executor',
+            provider=SlurmProvider(
+                init_blocks=0,
+                min_blocks=0,
+                max_blocks=1,
+                nodes_per_block=1,
+                scheduler_options='#SBATCH --nodes=1 -p batch -J md_debug -A csc728 --qos=debug',
+                launcher=SingleNodeLauncher(),
+                walltime='0:01:00',
+                cmd_timeout=5,
+            ),
+        )
+    ]
+)

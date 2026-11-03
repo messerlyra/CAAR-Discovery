@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+
+ 1. [ ] Update run_FOM.sh to remove template-related logic (sed substitutions and file copying).
+ 2. [ ] Update the run_one function in run_FOM.sh to export NNODES_QM, NNODES_ML, and NNODES_MD.
+
+
 # MD node counts and per-stage node limits (-1 means no additional limit).
 NODE_COUNTS=(1 2 4 8)
 NODE_MAX_MD=-1
@@ -21,11 +26,9 @@ readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/script
 readonly TMUX_SESSION="alf_FOM"
 readonly MASTER_TEMPLATE="master_template.json"
 readonly MASTER_CONFIG="master_FOM.json"
-readonly FRONTIER_TEMPLATE="frontier_template.py"
-readonly FRONTIER_CONFIG="frontier_FOM.py"
 readonly H5_PRECOMPUTED_DIR="h5store_precomputed"
 
-for path in "$TEMPLATE_DIR/$MASTER_TEMPLATE" "$TEMPLATE_DIR/$FRONTIER_TEMPLATE" "$ENVIRONMENT_SCRIPT"; do
+for path in "$TEMPLATE_DIR/$MASTER_TEMPLATE" "$ENVIRONMENT_SCRIPT"; do
     if [[ ! -f "$path" ]]; then
         echo "Error: required file not found: $path" >&2
         exit 1
@@ -105,7 +108,6 @@ for nodes in "${NODE_COUNTS[@]}"; do
     mkdir -p "$test_dir"
     cp -a "$TEMPLATE_DIR/." "$test_dir/"
     mv -f "$test_dir/$MASTER_TEMPLATE" "$test_dir/$MASTER_CONFIG"
-    mv -f "$test_dir/$FRONTIER_TEMPLATE" "$test_dir/$FRONTIER_CONFIG"
 
     sed -i \
         -e "s/NNODES_QM/${nnodes_qm}/g" \
@@ -118,7 +120,7 @@ for nodes in "${NODE_COUNTS[@]}"; do
         -e "s/NCONFIGS_MD_MINUS_ONE/$((nconfigs_md - 1))/g" \
         -e "s/NCONFIGS_MD_PLUS_ONE/$((nconfigs_md + 1))/g" \
         -e "s/NCONFIGS_MD/${nconfigs_md}/g" \
-        "$test_dir/$FRONTIER_CONFIG" "$test_dir/$MASTER_CONFIG"
+        "$test_dir/$MASTER_CONFIG"
 
     mkdir -p "$test_dir/h5store"
     for ((h5_index = 0; h5_index < h5_copies; h5_index++)); do
@@ -149,6 +151,7 @@ run_one() {
     (
         cd "$test_dir" || exit 1
         source "$environment_script" || exit 1
+        export PYTHONPATH="$BASE_DIR/src:$PYTHONPATH"
         export FOM_NODE_COUNT="$nnodes_md"
         echo "Starting FOM test: $nnodes_md MD node(s), $nnodes_qm QM node(s), $nnodes_ml ML node(s) at $(date -Is)"
         python -u -m alframework --master master_FOM.json
@@ -195,6 +198,7 @@ if (( failure == 0 )); then
 
     (
         source "$environment_script" || exit 1
+        export PYTHONPATH="$BASE_DIR/src:$PYTHONPATH"
         python -u "$compare_script" --alf_path "$output_root" --nodes "${node_counts[@]}" \
             --results-dir "$results_dir" --figures-dir "$figures_dir"
     ) > "$comparison_log" 2>&1

@@ -4,7 +4,7 @@ import random
 import os
 import numpy as np
 from parsl import python_app, bash_app
-from demo.timing.timing_client import time_task
+from timing.timing_client import time_task
 import json
 
 import ase
@@ -17,11 +17,56 @@ from ase.io import read, write
 from alframework.tools.tools import random_rotation_matrix
 from alframework.tools.tools import build_input_dict
 from alframework.tools.molecules_class import MoleculesObject
-import random
 from copy import deepcopy
 
 from alframework.builders.builders import create_atomic_system, construct_simulation_box, atomic_system_builder
 from ase.data import atomic_masses, atomic_numbers
+from itertools import combinations
+
+def atom_charges_selector(atom_charges, max_elements=None, rng=None):
+    """Select one valid element combination uniformly at random.
+
+    Every subset containing at least one cation and one anion has the same
+    probability. If ``max_elements`` is provided, only subsets with at most
+    that many elements are considered.
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    cations = [element for element, charge in atom_charges.items() if charge > 0]
+    anions = [element for element, charge in atom_charges.items() if charge < 0]
+
+    if not cations:
+        raise ValueError("atom_charges must contain at least one cation (positive charge).")
+    if not anions:
+        raise ValueError("atom_charges must contain at least one anion (negative charge).")
+    if max_elements is not None:
+        if not isinstance(max_elements, (int, np.integer)):
+            raise TypeError("max_elements must be an integer or None.")
+        if max_elements < 2:
+            raise ValueError("max_elements must be at least 2.")
+        if max_elements > len(atom_charges):
+            raise ValueError(
+                "max_elements cannot exceed the number of available elements."
+            )
+
+    elements = list(atom_charges)
+    largest_allowed = len(elements) if max_elements is None else max_elements
+    valid_combinations = [
+        combination
+        for size in range(2, largest_allowed + 1)
+        for combination in combinations(elements, size)
+        if any(element in cations for element in combination)
+        and any(element in anions for element in combination)
+    ]
+    selected_elements = valid_combinations[
+        int(rng.integers(0, len(valid_combinations)))
+    ]
+    return {
+        element: atom_charges[element]
+        for element in selected_elements
+    }
+
 
 def atomic_system_builder_alt(atom_charges, target_num_atoms, min_distance, density, max_tries=25, scale_coords=False):
     """Builds the atomic system
@@ -56,8 +101,8 @@ def atomic_system_builder_alt(atom_charges, target_num_atoms, min_distance, dens
     return ase.Atoms(atoms_type_list, coords, pbc=True, cell=np.diag([box_length]*3))
 
 @python_app(executors=['alf_sampler_executor'])
-@time_task(lambda moleculeid, **kws: f"build.{moleculeid}")
-def atomic_system_task(moleculeid, atom_charges, target_num_atoms, min_distance, density_range):
+@time_task(lambda moleculeid, *args, **kws: f"builder.{moleculeid}")
+def atomic_system_task(moleculeid, atom_charges, target_num_atoms, min_distance, density_range, max_elements=None):
     """Atomic system task that will be fed to the sampler.
 
     Args:
@@ -67,6 +112,7 @@ def atomic_system_task(moleculeid, atom_charges, target_num_atoms, min_distance,
         target_num_atoms (int): Targeted total number of atoms in the system.
         min_distance (float): Minimum absolute distance between any two atoms [Angstroms].
         density_range (list): A list containing the minimum and maximum simulation box density [g/cm3].
+        max_elements (int, optional): Maximum number of elements to select for the system.
 
     Returns:
         (MoleculesObject): A MoleculesObject representing the system.
@@ -75,6 +121,8 @@ def atomic_system_task(moleculeid, atom_charges, target_num_atoms, min_distance,
     rng = np.random.default_rng()
     density = rng.uniform(min(density_range), max(density_range))    
 
-    ase_atoms = atomic_system_builder_alt(atom_charges, target_num_atoms, min_distance, density)
+    atoms_selected = atom_charges_selector(atom_charges, max_elements, rng)
+
+    ase_atoms = atomic_system_builder_alt(atoms_selected, target_num_atoms, min_distance, density)
 
     return MoleculesObject(ase_atoms, moleculeid)

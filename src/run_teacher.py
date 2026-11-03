@@ -1,4 +1,5 @@
 # Run this script as: python run_teacher.py
+import os, sys; sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 #
 # This script performs a simple labeling (teacher) task using ALF.
 # It loads molecules from an HDF5 file, labels them, and saves the results.

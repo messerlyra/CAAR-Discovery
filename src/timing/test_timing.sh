@@ -5,6 +5,7 @@ set -e
 
 # Setup paths
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export PYTHONPATH="$(dirname "$(dirname "$SCRIPT_DIR")"):$PYTHONPATH"
 PYTHON_BIN="/home/99r/para/projects/ALF/src/.venv/bin/python"
 LOG_FILE="$SCRIPT_DIR/timings_test.csv"
 SERVER_SCRIPT="$SCRIPT_DIR/timing_server.py"

@@ -4,7 +4,7 @@ import pickle
 import re
 import parsl
 from parsl import python_app, bash_app
-from demo.timing.timing_client import time_task
+from timing.timing_client import time_task
 
 import os
 import ase
@@ -24,7 +24,7 @@ import torch
 import time
 
 @python_app(executors=['alf_QM_executor'])
-@time_task(lambda mol: f"hippynn.{mol.get_moleculeid()}")
+@time_task(lambda mol, *args, **kws: f"hippynn.{mol.get_moleculeid()}")
 def hippynn_calculator_task(molecule_object,QM_config,QM_scratch_dir,properties_list):
 
     assert isinstance(molecule_object, MoleculesObject), 'molecule_object must be an instance of MoleculesObject'

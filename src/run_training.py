@@ -1,4 +1,5 @@
 # Run this script as:
+import os, sys; sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # python run_training.py
 #
 # This script performs a simple training task for a HIPPYNN ensemble using the CAAR-Discovery framework.
