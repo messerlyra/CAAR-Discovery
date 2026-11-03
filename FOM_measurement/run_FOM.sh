@@ -151,7 +151,7 @@ run_one() {
     (
         cd "$test_dir" || exit 1
         source "$environment_script" || exit 1
-        export PYTHONPATH="$BASE_DIR/../src:$PYTHONPATH"
+        export PYTHONPATH="/lustre/orion/csc728/proj-shared/rogersdd/CAAR-Discovery/src:$PYTHONPATH"
         export FOM_NODE_COUNT="$nnodes_md"
         echo "Starting FOM test: $nnodes_md MD node(s), $nnodes_qm QM node(s), $nnodes_ml ML node(s) at $(date -Is)"
         python -u -m alframework --master master_FOM.json
@@ -198,7 +198,7 @@ if (( failure == 0 )); then
 
     (
         source "$environment_script" || exit 1
-        export PYTHONPATH="$BASE_DIR/../src:$PYTHONPATH"
+        export PYTHONPATH="/lustre/orion/csc728/proj-shared/rogersdd/CAAR-Discovery/src:$PYTHONPATH"
         python -u "$compare_script" --alf_path "$output_root" --nodes "${node_counts[@]}" \
             --results-dir "$results_dir" --figures-dir "$figures_dir"
     ) > "$comparison_log" 2>&1
