@@ -29,7 +29,9 @@ if [[ -z "${TIMING_LOG:-}" ]]; then
 fi
 TIMING_PORT="${TIMING_PORT:-12710}"
 
-readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
+if [ ! -d "$BASE_DIR" ]; then
+    readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
+fi
 
 TIMING_SERVER_SCRIPT="$BASE_DIR/../src/timing/timing_server.py"
 

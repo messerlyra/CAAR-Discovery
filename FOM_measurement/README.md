@@ -42,17 +42,25 @@ To launch a test for a specific node count:
 ```bash
 ./run_FOM.sh <node_count>
 ```
-This creates a `tmux` session (e.g., `alf-FOM-8`) to ensure the run continues in the background. Each test is organized into a directory named `nodes_<MD>MD_<QM>QM_<ML>ML` inside `FOM_runs/`, which serves as the primary identifier for that run.
+This launches the worker as a detached background process using `nohup`. Each test is organized into a directory named `nodes_<MD>MD_<QM>QM_<ML>ML` inside `FOM_runs/`, which serves as the primary identifier for that run. The worker's own ouput is sent to `$test_dir/runner.log`.
 
 ---
 
 ## 3. Diagnostics & Monitoring
 
-Monitoring the progress of a run can be done without attaching to `tmux` by checking the following files in the test directory:
+Monitoring the progress of a run can be done by checking the following files in the test directory:
 
 - **`alf_FOM.log`**: Captures the `alframework` stdout. This is the primary log for monitoring the overall run.
+
+  `cat FOM_runs/nodes_8MD_8QM_1ML/alf_FOM.log | grep -v ':[ 0-9]*$'`
+
 - **`status_FOM.txt`**: Records job completion counts. The contents of this file are printed to `alf_FOM.log` every minute.
+
+  `diff -b FOM_template/status_FOM.txt FOM_runs/nodes_8MD_8QM_1ML/status_FOM.txt`
+
 - **`runinfo/`**: Contains the stdout and stderr of the `sbatch` jobs managed by Parsl.
+
+  `wc FOM_runs/nodes_8MD_8QM_1ML/runinfo/*/submit_scripts/*.std*`
 
 ---
 
