@@ -27,6 +27,9 @@ WALLTIME_QM = get_env_str('WALLTIME_QM', '0:30:00')
 WALLTIME_ML = get_env_str('WALLTIME_ML', '0:15:00')
 WALLTIME_MD = get_env_str('WALLTIME_MD', '0:15:00')
 
+shared_opts = "-q debug -p batch -A csc728"
+debug_opts  = "-q debug -p batch -A csc728"
+
 config_standard = Config(
     executors=[
         HighThroughputExecutor(
@@ -36,7 +39,7 @@ config_standard = Config(
                 init_blocks=0,
                 min_blocks=0,
                 max_blocks=1,
-                scheduler_options=f'#SBATCH --nodes={NNODES_QM} --ntasks-per-node=8 -p batch -J QM_{NNODES_QM}nodes -A csc728',
+                scheduler_options=f'#SBATCH --nodes={NNODES_QM} --ntasks-per-node=8 -J QM_{NNODES_QM}nodes {shared_opts}',
                 launcher=SrunLauncher(overrides=f'--ntasks {NCONFIGS_QM} -c 7 --gpus-per-task=1 --gpu-bind=closest'),
                 walltime=WALLTIME_QM,
                 cmd_timeout=30,
@@ -49,7 +52,7 @@ config_standard = Config(
                 min_blocks=0,
                 max_blocks=1,
                 nodes_per_block=1,
-                scheduler_options=f'#SBATCH --nodes={NNODES_ML} --ntasks-per-node=1 -p batch -J ML_{NNODES_ML}nodes -A csc728',
+                scheduler_options=f'#SBATCH --nodes={NNODES_ML} --ntasks-per-node=1 -J ML_{NNODES_ML}nodes {shared_opts}',
                 launcher=SrunLauncher(overrides=f'--ntasks 1 -c 56 --gpus-per-task=8 --gpu-bind=closest'),
                 walltime=WALLTIME_ML,
                 cmd_timeout=30,
@@ -62,7 +65,7 @@ config_standard = Config(
                 init_blocks=0,
                 min_blocks=0,
                 max_blocks=1,
-                scheduler_options=f'#SBATCH --nodes={NNODES_MD} --ntasks-per-node=8 -p batch -J MD_{NNODES_MD}nodes -A csc728',
+                scheduler_options=f'#SBATCH --nodes={NNODES_MD} --ntasks-per-node=8 -J MD_{NNODES_MD}nodes {shared_opts}',
                 launcher=SrunLauncher(overrides=f'--ntasks {NCONFIGS_MD} -c 7 --gpus-per-task=1 --gpu-bind=closest'),
                 walltime=WALLTIME_MD,
                 cmd_timeout=30,
@@ -80,7 +83,7 @@ config_debug = Config(
                 min_blocks=0,
                 max_blocks=1,
                 nodes_per_block=1,
-                scheduler_options='#SBATCH --nodes=1 --ntasks-per-node=1 -p batch -J QM_debug -A csc728',
+                scheduler_options=f'#SBATCH --nodes=1 --ntasks-per-node=1 -J QM_debug {debug_opts}',
                 launcher=SimpleLauncher(),
                 walltime='0:10:00',
                 cmd_timeout=5,
@@ -93,7 +96,7 @@ config_debug = Config(
                 min_blocks=0,
                 max_blocks=1,
                 nodes_per_block=1,
-                scheduler_options='#SBATCH --nodes=1 -p batch -J ML_debug -A csc728 --qos=debug',
+                scheduler_options=f'#SBATCH --nodes=1 -J ML_debug {debug_opts}',
                 launcher=SingleNodeLauncher(),
                 walltime='0:05:00',
                 cmd_timeout=5,
@@ -106,7 +109,7 @@ config_debug = Config(
                 min_blocks=0,
                 max_blocks=1,
                 nodes_per_block=1,
-                scheduler_options='#SBATCH --nodes=1 -p batch -J md_debug -A csc728 --qos=debug',
+                scheduler_options=f'#SBATCH --nodes=1 -J MD_debug {debug_opts}',
                 launcher=SingleNodeLauncher(),
                 walltime='0:01:00',
                 cmd_timeout=5,
