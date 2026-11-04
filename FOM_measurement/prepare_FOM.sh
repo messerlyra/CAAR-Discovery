@@ -1,30 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# MD node counts and per-stage node limits (-1 means no additional limit).
-NODE_COUNTS=(1 2 4 8)
 NODE_MAX_MD=-1
 NODE_MAX_QM=64
 NODE_MAX_ML=1
 readonly GPUS_PER_NODE=8
 
-readonly TEMPLATE_DIR="FOM_template"
-readonly OUTPUT_ROOT="FOM_runs"
-readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash"
-readonly TMUX_SESSION="alf_FOM"
+# Resolve paths before entering any ALF test directory.
+readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
+readonly OUTPUT_ABS="$BASE_DIR/FOM_runs"
+readonly TEMPLATE_DIR="$BASE_DIR/FOM_template"
 readonly MASTER_TEMPLATE="master_template.json"
 readonly H5_PRECOMPUTED_DIR="h5store_precomputed"
 
-for path in "$TEMPLATE_DIR/$MASTER_TEMPLATE" "$ENVIRONMENT_SCRIPT"; do
+for path in "$TEMPLATE_DIR/$MASTER_TEMPLATE"; do
     if [[ ! -f "$path" ]]; then
         echo "Error: required file not found: $path" >&2
         exit 1
     fi
 done
-if [[ ${#NODE_COUNTS[@]} -eq 0 ]]; then
-    echo "Error: NODE_COUNTS is empty." >&2
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <node_count>" >&2
     exit 1
 fi
+nodes="$1"
+
 for limit in "$NODE_MAX_MD" "$NODE_MAX_QM" "$NODE_MAX_ML"; do
     if [[ ! "$limit" =~ ^-?[0-9]+$ ]] || (( limit == 0 || limit < -1 )); then
         echo "Error: node limits must be positive integers or -1." >&2
@@ -32,15 +33,8 @@ for limit in "$NODE_MAX_MD" "$NODE_MAX_QM" "$NODE_MAX_ML"; do
     fi
 done
 
-# Resolve paths before entering any ALF test directory.
-readonly BASE_DIR="$PWD"
-mkdir -p "$OUTPUT_ROOT"
-readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
-readonly RESULTS_DIR="$OUTPUT_ABS/results"
-readonly RUNNER="$BASE_DIR/run_FOM_worker.sh"
-
-# Prepare configurations and precomputed HDF5 copies for every test.
-for nodes in "${NODE_COUNTS[@]}"; do
+# Prepare configurations and precomputed HDF5 copies for this test.
+if true; then
     if [[ ! "$nodes" =~ ^[1-9][0-9]*$ ]]; then
         echo "Error: invalid node count: $nodes" >&2
         exit 1
@@ -76,7 +70,7 @@ for nodes in "${NODE_COUNTS[@]}"; do
     test_name="nodes_${nnodes_md}MD_${nnodes_qm}QM_${nnodes_ml}ML"
     test_dir="$OUTPUT_ABS/$test_name"
     mkdir -p "$test_dir"
-    rsync -v "$TEMPLATE_DIR/" "$test_dir/"
+    cp -a "$TEMPLATE_DIR/" "$test_dir/"
 
     sed -e "s/NNODES_QM/${nnodes_qm}/g" \
         -e "s/NNODES_MD/${nnodes_md}/g" \
@@ -93,11 +87,8 @@ for nodes in "${NODE_COUNTS[@]}"; do
     mkdir -p "$test_dir/h5store"
     for ((h5_index = 0; h5_index < h5_copies; h5_index++)); do
         printf -v h5_name 'data-%sconfigs-copy-%04d.h5' "$nconfigs_qm" "$h5_index"
-        rsync -v "$H5_PRECOMPUTED_DIR/$h5_precomputed_file" "$test_dir/h5store/$h5_name"
+        cp "$H5_PRECOMPUTED_DIR/$h5_precomputed_file" "$test_dir/h5store/$h5_name"
     done
 
     echo "Prepared $test_name: MD=$nconfigs_md, QM/batch=$nconfigs_qm, QM batches=$qm_batches, HDF5 copies=$h5_copies"
-done
-echo "Prepared ${#NODE_COUNTS[@]} FOM tests in: $OUTPUT_ABS"
-echo "Logs are stored inside each test directory under: $OUTPUT_ROOT"
-echo "Comparison results: $RESULTS_DIR"
+fi

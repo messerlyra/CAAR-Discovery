@@ -57,7 +57,7 @@ function ensure_present() {
 
 
 # Resolve paths before entering any ALF test directory.
-readonly BASE_DIR=$(dirname $(realpath "$0"))
+readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
 readonly RUNNER="$BASE_DIR/run_FOM_worker.sh"
 

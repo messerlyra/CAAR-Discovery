@@ -23,12 +23,11 @@ if [[ -n "${CAAR_TIMING_SERVER:-}" ]]; then
     return 0 2>/dev/null || exit 0
 fi
 
-if [ $# -lt 1 ]; then
-    echo "Warning, no timing server started. Usage: $0 <logfile> [port]" >&2
+if [[ -z "${TIMING_LOG:-}" ]]; then
+    echo "Warning, no timing server started. TIMING_LOG must be defined!"
     return 0 2>/dev/null || exit 0
 fi
-TIMING_LOG="$1"
-TIMING_PORT="${2:-${TIMING_PORT:-12710}}"
+TIMING_PORT="${TIMING_PORT:-12710}"
 
 readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 
