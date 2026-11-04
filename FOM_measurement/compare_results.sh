@@ -17,10 +17,15 @@ readonly MANIFEST="$OUTPUT_ROOT/FOM_manifest.tsv"
 readonly COMPARE_SCRIPT="$BASE_DIR/compare_FOM.py"
 readonly RESULTS_DIR="$OUTPUT_ROOT/results"
 readonly FIGURES_DIR="$OUTPUT_ROOT/figures"
+readonly ENVIRONMENT_SCRIPT="${ENVIRONMENT_SCRIPT:-/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash}"
 
+mkdir -p "$RESULTS_DIR" "$FIGURES_DIR"
+
+echo "Starting FOM comparison..."
 comparison_log="$RESULTS_DIR/FOM_comparison.log"
-if (( failure == 0 )); then
-    echo "All ALF tests completed successfully. Starting FOM comparison..."
+for test_dir in $OUTPUT_ROOT/nodes_*; do
+	test_name=$(basename $test_dir)
+	parse
     node_counts=()
     while IFS=$'\t' read -r test_name nnodes_md nnodes_qm nnodes_ml; do
         node_counts+=("$nnodes_md")
@@ -28,7 +33,7 @@ if (( failure == 0 )); then
 
     (
         # shellcheck disable=SC1090
-        source "$environment_script" || exit 1
+        source "$ENVIRONMENT_SCRIPT" || exit 1
         export PYTHONPATH="$BASE_DIR/../src:$PYTHONPATH"
         python -u "$COMPARE_SCRIPT" --alf_path "$OUTPUT_ROOT" --nodes "${node_counts[@]}" \
             --results-dir "$RESULTS_DIR" --figures-dir "$FIGURES_DIR"

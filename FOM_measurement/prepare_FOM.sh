@@ -13,7 +13,6 @@ readonly OUTPUT_ROOT="FOM_runs"
 readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash"
 readonly TMUX_SESSION="alf_FOM"
 readonly MASTER_TEMPLATE="master_template.json"
-readonly MASTER_CONFIG="master_FOM.json"
 readonly H5_PRECOMPUTED_DIR="h5store_precomputed"
 
 for path in "$TEMPLATE_DIR/$MASTER_TEMPLATE" "$ENVIRONMENT_SCRIPT"; do
@@ -38,11 +37,7 @@ readonly BASE_DIR="$PWD"
 mkdir -p "$OUTPUT_ROOT"
 readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
 readonly RESULTS_DIR="$OUTPUT_ABS/results"
-readonly FIGURES_DIR="$OUTPUT_ABS/figures"
-mkdir -p "$RESULTS_DIR" "$FIGURES_DIR"
-readonly MANIFEST="$OUTPUT_ABS/FOM_manifest.tsv"
 readonly RUNNER="$BASE_DIR/run_FOM_worker.sh"
-: > "$MANIFEST"
 
 # Prepare configurations and precomputed HDF5 copies for every test.
 for nodes in "${NODE_COUNTS[@]}"; do
@@ -82,10 +77,8 @@ for nodes in "${NODE_COUNTS[@]}"; do
     test_dir="$OUTPUT_ABS/$test_name"
     mkdir -p "$test_dir"
     rsync -v "$TEMPLATE_DIR/" "$test_dir/"
-    mv -f "$test_dir/$MASTER_TEMPLATE" "$test_dir/$MASTER_CONFIG"
 
-    sed -i \
-        -e "s/NNODES_QM/${nnodes_qm}/g" \
+    sed -e "s/NNODES_QM/${nnodes_qm}/g" \
         -e "s/NNODES_MD/${nnodes_md}/g" \
         -e "s/NNODES_ML/${nnodes_ml}/g" \
         -e "s/NNODES/${nnodes_md}/g" \
@@ -95,7 +88,7 @@ for nodes in "${NODE_COUNTS[@]}"; do
         -e "s/NCONFIGS_MD_MINUS_ONE/$((nconfigs_md - 1))/g" \
         -e "s/NCONFIGS_MD_PLUS_ONE/$((nconfigs_md + 1))/g" \
         -e "s/NCONFIGS_MD/${nconfigs_md}/g" \
-        "$test_dir/$MASTER_CONFIG"
+        "$test_dir/$MASTER_TEMPLATE" >"$test_dir/master_config.json"
 
     mkdir -p "$test_dir/h5store"
     for ((h5_index = 0; h5_index < h5_copies; h5_index++)); do
@@ -103,10 +96,8 @@ for nodes in "${NODE_COUNTS[@]}"; do
         rsync -v "$H5_PRECOMPUTED_DIR/$h5_precomputed_file" "$test_dir/h5store/$h5_name"
     done
 
-    printf '%s\t%s\t%s\t%s\n' "$test_name" "$nnodes_md" "$nnodes_qm" "$nnodes_ml" >> "$MANIFEST"
     echo "Prepared $test_name: MD=$nconfigs_md, QM/batch=$nconfigs_qm, QM batches=$qm_batches, HDF5 copies=$h5_copies"
 done
 echo "Prepared ${#NODE_COUNTS[@]} FOM tests in: $OUTPUT_ABS"
 echo "Logs are stored inside each test directory under: $OUTPUT_ROOT"
 echo "Comparison results: $RESULTS_DIR"
-echo "Figures: $FIGURES_DIR"

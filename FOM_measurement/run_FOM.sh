@@ -17,9 +17,6 @@ readonly TEMPLATE_DIR="FOM_template"
 readonly OUTPUT_ROOT="FOM_runs"
 readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash"
 readonly TMUX_SESSION="alf-FOM-$NODE_COUNT"
-readonly MASTER_TEMPLATE="master_template.json"
-readonly MASTER_CONFIG="master_FOM.json"
-readonly H5_PRECOMPUTED_DIR="h5store_precomputed"
 
 if ! command -v tmux >/dev/null 2>&1; then
     echo "Error: tmux is not available." >&2
@@ -40,15 +37,6 @@ if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
     exit 1
 fi
 
-# Resolve paths before entering any ALF test directory.
-readonly BASE_DIR=$(dirname $(realpath "$0"))
-readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
-readonly RESULTS_DIR="$OUTPUT_ABS/results"
-readonly FIGURES_DIR="$OUTPUT_ABS/figures"
-readonly RUNNER="$BASE_DIR/run_FOM_worker.sh"
-
-ensure_directory "$OUTPUT_ABS/{results,figures}"
-
 function ensure_directory() {
   for dname in "$@"; do
     if [ ! -d "$dname" ]; then
@@ -66,6 +54,14 @@ function ensure_present() {
     fi
   done
 }
+
+
+# Resolve paths before entering any ALF test directory.
+readonly BASE_DIR=$(dirname $(realpath "$0"))
+readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
+readonly RUNNER="$BASE_DIR/run_FOM_worker.sh"
+
+ensure_directory "$OUTPUT_ABS"/{results,figures}
 
 # Ensure config files and precomputed HDF5 files are present.
 if true; then
@@ -93,10 +89,9 @@ if true; then
 
     test_name="nodes_${nnodes_md}MD_${nnodes_qm}QM_${nnodes_ml}ML"
     test_dir="$OUTPUT_ABS/$test_name"
-    ensure_present "$test_dir/status_FOM.txt"
-    ensure_present "$test_dir/{master,builder,sampler,teacher,training}_config.json"
-    ensure_directory "$test_dir/{ensembles,h5store}"
-    ensure_present "$test_dir/$MASTER_CONFIG"
+    ensure_present "$test_dir"/status_FOM.txt
+    ensure_present "$test_dir"/{master,builder,sampler,teacher,training}_config.json
+    ensure_directory "$test_dir"/{ensembles,h5store}
 
     for ((h5_index = 0; h5_index < h5_copies; h5_index++)); do
         printf -v h5_name 'data-%sconfigs-copy-%04d.h5' "$nconfigs_qm" "$h5_index"

@@ -30,11 +30,13 @@ readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 readonly OUTPUT_ROOT="$BASE_DIR/FOM_runs"
 
 # Re-export derived vars for start_timing_server.sh and run_one
-export ENVIRONMENT_SCRIPT="${ENVIRONMENT_SCRIPT:/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash}"
+export ENVIRONMENT_SCRIPT="${ENVIRONMENT_SCRIPT:-/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash}"
 
 # Start timing collector.
 # shellcheck disable=SC1090
 source "$BASE_DIR/start_timing_server.sh $test_dir/timings.csv"
+# Note: the following is better, but requires start_timing_server to read the env-var instead of $1
+#TIMING_LOG="$test_dir/timings.csv" source "$BASE_DIR/start_timing_server.sh"
 
 log_path="$test_dir/alf_FOM.log"
 
@@ -43,11 +45,11 @@ failure=0
 (
     cd "$test_dir" || exit 1
     # shellcheck disable=SC1090
-    source "$environment_script" || exit 1
-    export PYTHONPATH="/lustre/orion/csc728/proj-shared/rogersdd/CAAR-Discovery/src:$PYTHONPATH"
+    source "$ENVIRONMENT_SCRIPT" || exit 1
+    export PYTHONPATH="$BASE_DIR/../src:$PYTHONPATH"
     export FOM_NODE_COUNT="$NNODES_MD"
     echo "Starting FOM test: $NNODES_MD MD node(s), $NNODES_QM QM node(s), $NNODES_ML ML node(s) at $(date -Is)"
-    python -u -m alframework --master master_FOM.json
+    python -u -m alframework --master master_config.json
     status=$?
     echo "ALF exit code: $status"
     exit "$status"
