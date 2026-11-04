@@ -220,7 +220,7 @@ def mlmd_sampling(molecule_object, ase_calculator, dt, maxt, Escut, Fscut, Nchec
 
 
 @python_app(executors=['alf_sampler_executor'])
-@time_task(lambda mol, *args, **kws: f"sampling.{mol.get_moleculeid()}")
+@time_task("sampling")
 def simple_mlmd_sampling_task(molecule_object, sampler_config, model_path, current_model_id, gpus_per_node):
     """ A simple implementation of uncertanty based MD sampling.
 

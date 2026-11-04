@@ -82,29 +82,29 @@ def get_timing_client():
         _client = TimingClient()
     return _client
 
-def report_task_status(task_id, status):
+def report_task_status(task_id: str, status: str):
     client = get_timing_client()
     client.send_status(task_id, status)
 
-def time_task(task_id_func):
+def time_task(task_name: str):
     """
     Decorator to report task start and end.
-    task_id_func is a function that takes the decorated function's args and returns a task_id string.
+    task_name is a string that prefixes the task.
     """
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            try:
-              task_id = task_id_func(*args, **kwargs)
-            except Exception:
-              task_id = 'unknown'
+            if len(args) > 0:
+                task_id = f"{task_name}.{str(args[0])}"
+            else:
+                task_id = task_name
             report_task_status(task_id, "start")
             try:
                 result = func(*args, **kwargs)
                 report_task_status(task_id, "end")
                 return result
             except Exception as e:
-                report_task_status(task_id, "error")
+                report_task_status(task_id, f"error: {str(e)}")
                 raise e
         return wrapper
     return decorator

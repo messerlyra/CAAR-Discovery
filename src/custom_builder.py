@@ -101,7 +101,7 @@ def atomic_system_builder_alt(atom_charges, target_num_atoms, min_distance, dens
     return ase.Atoms(atoms_type_list, coords, pbc=True, cell=np.diag([box_length]*3))
 
 @python_app(executors=['alf_sampler_executor'])
-@time_task(lambda moleculeid, *args, **kws: f"builder.{moleculeid}")
+@time_task("builder")
 def atomic_system_task(moleculeid, atom_charges, target_num_atoms, min_distance, density_range, max_elements=None):
     """Atomic system task that will be fed to the sampler.
 
