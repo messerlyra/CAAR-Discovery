@@ -5,7 +5,7 @@ set -e
 
 # Setup paths
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export PYTHONPATH="$(dirname "$(dirname "$SCRIPT_DIR")"):$PYTHONPATH"
+export PYTHONPATH="$(dirname "$SCRIPT_DIR"):$PYTHONPATH"
 PYTHON_BIN="/home/99r/para/projects/ALF/src/.venv/bin/python"
 LOG_FILE="$SCRIPT_DIR/timings_test.csv"
 SERVER_SCRIPT="$SCRIPT_DIR/timing_server.py"
@@ -23,7 +23,7 @@ sleep 2
 
 echo "Running test tasks..."
 for i in {1..15}; do
-    "$PYTHON_BIN" "$TEST_SCRIPT"
+    "$PYTHON_BIN" "$TEST_SCRIPT" || break
 done
 
 # Give the background sender threads a moment to flush
