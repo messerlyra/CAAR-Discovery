@@ -8,10 +8,9 @@ import threading
 import queue
 
 class TimingClient:
-    def __init__(self, server_addr=None, port=5555):
-        # Use environment variable if server_addr is not provided
-        self.server_addr = server_addr or os.environ.get("CAAR_TIMING_SERVER", "localhost")
-        self.port = port
+    def __init__(self, server_addr=None):
+        # server_addr or environment variable or default
+        self.server_url = server_addr or os.environ.get("CAAR_TIMING_SERVER", "tcp://localhost:5555")
 
         # Queue for outgoing messages
         self.msg_queue = queue.Queue()
@@ -28,7 +27,7 @@ class TimingClient:
         socket = context.socket(zmq.REQ)
         # Set a timeout so we don't hang forever if the server is down
         socket.setsockopt(zmq.RCVTIMEO, 2000)
-        socket.connect(f"tcp://{self.server_addr}:{self.port}")
+        socket.connect(self.server_url)
 
         while True:
             try:
@@ -49,7 +48,7 @@ class TimingClient:
                     socket.close()
                     socket = context.socket(zmq.REQ)
                     socket.setsockopt(zmq.RCVTIMEO, 2000)
-                    socket.connect(f"tcp://{self.server_addr}:{self.port}")
+                    socket.connect(self.server_url)
 
                 self.msg_queue.task_done()
             except Exception as e:
