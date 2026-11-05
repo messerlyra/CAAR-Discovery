@@ -17,17 +17,24 @@ def get_env_str(key, default):
     return os.getenv(key, default)
 
 # Dynamic values from environment variables
+NNODES_MD = get_env_int('NNODES_MD', 1)
 NNODES_QM = get_env_int('NNODES_QM', 1)
 NNODES_ML = get_env_int('NNODES_ML', 1)
-NNODES_MD = get_env_int('NNODES_MD', 1)
-NCONFIGS_QM = NNODES_QM * 8
 NCONFIGS_MD = NNODES_MD * 8
+NCONFIGS_QM = NNODES_QM * 8
 
+WALLTIME_MD = get_env_str('WALLTIME_MD', '0:15:00')
 WALLTIME_QM = get_env_str('WALLTIME_QM', '0:30:00')
 WALLTIME_ML = get_env_str('WALLTIME_ML', '0:15:00')
-WALLTIME_MD = get_env_str('WALLTIME_MD', '0:15:00')
 
-shared_opts = "-q debug -p batch -A csc728"
+print(f"NNODES_MD = {NNODES_MD}")
+print(f"NNODES_QM = {NNODES_QM}")
+print(f"NNODES_ML = {NNODES_ML}")
+print(f"WALLTIME_MD = {WALLTIME_MD}")
+print(f"WALLTIME_QM = {WALLTIME_QM}")
+print(f"WALLTIME_ML = {WALLTIME_ML}")
+
+shared_opts = "-p batch -A csc728"
 debug_opts  = "-q debug -p batch -A csc728"
 
 config_standard = Config(
