@@ -16,7 +16,12 @@ NODE_COUNT="$1"
 readonly TEMPLATE_DIR="FOM_template"
 readonly OUTPUT_ROOT="FOM_runs"
 readonly ENVIRONMENT_SCRIPT="/lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash"
+readonly TMUX_SESSION="alf-FOM-$NODE_COUNT"
 
+if ! command -v tmux >/dev/null 2>&1; then
+    echo "Error: tmux is not available." >&2
+    exit 1
+fi
 if [[ ! "$NODE_COUNT" =~ ^[1-9][0-9]*$ ]]; then
     echo "Error: invalid node count: $NODE_COUNT" >&2
     exit 1
@@ -27,6 +32,10 @@ for limit in "$NODE_MAX_MD" "$NODE_MAX_QM" "$NODE_MAX_ML"; do
         exit 1
     fi
 done
+if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+    echo "Error: tmux session already exists: $TMUX_SESSION" >&2
+    exit 1
+fi
 
 function ensure_directory() {
   for dname in "$@"; do
@@ -90,15 +99,11 @@ if true; then
     done
 fi
 
-# Check if a worker for this test directory is already running.
-if pgrep -f "$RUNNER $test_dir" >/dev/null 2>&1; then
-    echo "Error: A worker for $test_dir is already running." >&2
-    exit 1
-fi
-
+# New convention: worker derives most paths from OUTPUT_ABS; only
+# output_root and parallel flag are required.
+echo "Starting tmux session: $TMUX_SESSION"
+tmux new-session -d -s "$TMUX_SESSION" -n "FOM_tests"
 echo "Spawning: $RUNNER $test_dir"
-nohup "$RUNNER" "$test_dir" >>"$test_dir/runner.log" 2>&1 &
-disown
-
+tmux send-keys -t "$TMUX_SESSION:FOM_tests" "$RUNNER $test_dir" C-m
 echo "Started $NODE_COUNT-node FOM test in $test_dir"
-echo "Monitor progress via: tail -f $test_dir/alf_FOM.log"
+echo "Attach with: tmux attach -t $TMUX_SESSION"
