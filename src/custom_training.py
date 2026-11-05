@@ -1,4 +1,5 @@
 from parsl import python_app, bash_app
+from timing.timing_client import time_task
 import sys
 import multiprocessing
 import re
@@ -533,6 +534,7 @@ def train_HIPNN_model_wrapper(arg_dict):
     return(train_HIPNN_model(**arg_dict))
 
 @python_app(executors=['alf_ML_executor'])
+@time_task("training")
 def train_HIPPYNN_ensemble_task(ML_config,h5_dir,model_path,current_training_id,gpus_per_node,remove_existing=False,h5_test_dir=None):
     p = multiprocessing.Pool(gpus_per_node)
     general_configuration = ML_config.copy()

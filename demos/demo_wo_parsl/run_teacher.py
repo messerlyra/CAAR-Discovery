@@ -1,4 +1,5 @@
 # Run this script as: python run_teacher.py
+import os, sys; sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 #
 # This script performs a simple labeling (teacher) task using ALF.
 # It loads molecules from an HDF5 file, labels them, and saves the results.
@@ -19,7 +20,7 @@ def main():
         qm_config = json.load(f)
 
     # Load molecules from the demo HDF5 store
-    h5_src = 'h5store/data-Li_Na_K_Rb_Cs_Be_Mg_Ca_Sr_Ba_F_Cl-0000.h5'
+    h5_src = 'h5store/example.h5'
     h5_dst = 'labeled_molecules.h5'
     if os.path.exists(h5_dst):
         raise FileExistsError(f"refusing to overwrite existing {h5_dst}")
@@ -45,8 +46,8 @@ def main():
         print(f"Labeling molecule {i+1}/{len(molecules)}: {mol.get_moleculeid()}...")
         try:
             result = run_parsl(
-                #Rootstock_calculator_task,
-                hippynn_calculator_task,
+                Rootstock_calculator_task,
+                #hippynn_calculator_task,
                 molecule_object=mol,
                 QM_config=qm_config,
                 QM_scratch_dir=qm_scratch_dir,
