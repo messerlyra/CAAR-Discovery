@@ -70,7 +70,7 @@ if true; then
     test_name="nodes_${nnodes_md}MD_${nnodes_qm}QM_${nnodes_ml}ML"
     test_dir="$OUTPUT_ABS/$test_name"
     mkdir -p "$test_dir"
-    cp -a "$TEMPLATE_DIR/" "$test_dir/"
+    cp -a "$TEMPLATE_DIR/." "$test_dir/"
 
     sed -e "s/NNODES_QM/${nnodes_qm}/g" \
         -e "s/NNODES_MD/${nnodes_md}/g" \

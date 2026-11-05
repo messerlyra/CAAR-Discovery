@@ -61,8 +61,6 @@ readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 readonly OUTPUT_ABS="$BASE_DIR/$OUTPUT_ROOT"
 readonly RUNNER="$BASE_DIR/run_FOM_worker.sh"
 
-ensure_directory "$OUTPUT_ABS"/{results,figures}
-
 # Ensure config files and precomputed HDF5 files are present.
 if true; then
     nnodes_md=$NODE_COUNT
@@ -99,11 +97,17 @@ if true; then
     done
 fi
 
+if [ -d $test_dir/runinfo ]; then
+    echo "$test_dir/runinfo exists - refusing to re-run." >&2
+    exit 1
+fi
+
 # New convention: worker derives most paths from OUTPUT_ABS; only
 # output_root and parallel flag are required.
 echo "Starting tmux session: $TMUX_SESSION"
 tmux new-session -d -s "$TMUX_SESSION" -n "FOM_tests"
 echo "Spawning: $RUNNER $test_dir"
+echo "ssh $(hostname) tmux attach -t $TMUX_SESSION" >$test_dir/tmux.info
 tmux send-keys -t "$TMUX_SESSION:FOM_tests" "$RUNNER $test_dir" C-m
 echo "Started $NODE_COUNT-node FOM test in $test_dir"
-echo "Attach with: tmux attach -t $TMUX_SESSION"
+echo "Attach on $(hostname) with: tmux attach -t $TMUX_SESSION"

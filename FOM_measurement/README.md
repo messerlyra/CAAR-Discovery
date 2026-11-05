@@ -42,7 +42,7 @@ To launch a test for a specific node count:
 ```bash
 ./run_FOM.sh <node_count>
 ```
-This launches the worker as a detached background process using `nohup`. Each test is organized into a directory named `nodes_<MD>MD_<QM>QM_<ML>ML` inside `FOM_runs/`, which serves as the primary identifier for that run. The worker's own ouput is sent to `$test_dir/runner.log`.
+This launches the worker (`run_FOM_worker.sh`) as a process whose tree is managed by a tmux session. Each test is organized into a directory named `nodes_<MD>MD_<QM>QM_<ML>ML` inside `FOM_runs/`, which serves as the primary identifier for that run.
 
 ---
 
@@ -94,6 +94,9 @@ FOM_runs/                    # OUTPUT_BASE  (generated)
 ├── nodes_1MD_1QM_1ML/       # Individual test directory
 │   ├── alf_FOM.log          # Run log
 │   ├── status_FOM.txt       # Job status
+│   ├── timings.csv          # Timing server's collected log file
+│   ├── timings.csv.pid      # The pid of the timing server (a process within the tmux session)
+│   ├── tmux.info            # Reminder where the tmux for this session is running
 │   └── runinfo/             # Parsl sbatch logs
 ├── results/                 # Analysis outputs
 │   ├── FOM_comparison.csv   # Summary table
