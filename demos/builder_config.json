@@ -15,6 +15,7 @@
     "F": -1,
     "Cl": -1
   },
+  "max_elements":2,
   "target_num_atoms": 200,
   "min_distance": 1.5,
   "density_range": [

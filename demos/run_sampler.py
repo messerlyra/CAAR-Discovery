@@ -15,7 +15,7 @@ from tools import run_parsl, build_molecule
 
 def main():
     # Load config
-    with open('mlmd_config.json', 'r') as f:
+    with open('sampler_config.json', 'r') as f:
         sampler_config = json.load(f)
     
     with open('builder_config.json', 'r') as f:

@@ -17,7 +17,7 @@ def main():
         master_config = json.load(f)
 
     # Load config
-    with open('hippynn_config.json', 'r') as f:
+    with open('training_config.json', 'r') as f:
         ml_config = json.load(f)
 
     # Parameters
