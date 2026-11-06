@@ -3,7 +3,7 @@ import os, sys; sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # python run_training.py
 #
 # This script performs a simple training task for a HIPPYNN ensemble using the CAAR-Discovery framework.
-# It uses the configuration from hippynn_config.json and demo data from h5store.
+# It uses the configuration from hippynn_config.json and demo data from `dataset/*.h5`.
 
 import json
 import os
@@ -13,18 +13,16 @@ from tools import run_parsl
 from pathlib import Path
 
 def main():
-    with open('master_config.json', 'r') as f:
-        master_config = json.load(f)
-
     # Load config
     with open('training_config.json', 'r') as f:
         ml_config = json.load(f)
 
     # Parameters
-    h5_dir = Path('h5store').resolve() # Demo h5 store
-    model_path = master_config["model_path"]
-    current_training_id = 1
-    gpus_per_node = 1
+    h5_dir = Path('dataset').resolve()
+    # this is the trainer's output directory
+    model_path = 'models/ensemble-{:04d}'
+    current_training_id = 1 # arg for above, (models/ensemble-0001)
+    gpus_per_node = 1 # this will train just 1 model
 
     # Ensure models directory exists
     if not os.path.exists('models'):

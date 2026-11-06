@@ -3,8 +3,9 @@
 The `demo/demo_wo_parsl/run_*.py` scripts execute the three parts of
 the FOM individually on test structures and hippynn parameters from:
 
-- h5store: pre-computed molecule structure training dataset
+- h5store: molecule structures to input to teacher computation
 - ensembles: pre-computed hippynn model for running sampler
+- dataset: molecular structures to input to hippynn MLIP training
 
 Both of the above input datasets, as well as the `*.json` config
 files in this directory need to correspond to the ones used in
