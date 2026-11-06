@@ -106,10 +106,21 @@ def time_task(task_name: str):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if len(args) > 0:
+            try:
+              if len(args) > 0:
                 task_id = f"{task_name}.{str(args[0])}"
-            else:
+              else:
                 task_id = task_name
+              # attempt to get a molid label from the kwargs
+              if "moleculeid" in kwargs:
+                molid = kwargs["moleculeid"]
+                task_id = f"{task_name}.{molid}"
+              elif "molecule_object" in kwargs:
+                molid = kwargs["molecule_object"].get_moleculeid()
+                task_id = f"{task_name}.{molid}"
+            except Exception:
+              task_id = task_name
+
             report_task_status(task_id, "start")
             try:
                 result = func(*args, **kwargs)
