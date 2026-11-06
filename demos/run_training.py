@@ -22,7 +22,17 @@ def main():
     # this is the trainer's output directory
     model_path = 'models/ensemble-{:04d}'
     current_training_id = 1 # arg for above, (models/ensemble-0001)
-    gpus_per_node = 1 # this will train just 1 model
+
+    # Note: Increase `gpus_per_node` if you want concurrent
+    # trainers across GPUs. Setting to 1 says to use just 1 GPU.
+    # 
+    # Explanation: custom_training.train_HIPPYNN_ensemble_task
+    # runs multiprocessing.Pool(gpus_per_node).map(train_HIPNN_model_wrapper,params_list),
+    #      where len(params_list) == n_models.
+    # GPU binding is set inside train_HIPNN_model by setting CUDA_VISIBLE_DEVICES
+    # to (current_process-1)%gpus_per_node and then using device='cuda:0' in torch.
+    gpus_per_node = 1
+    ml_config['n_models'] = gpus_per_node # this will train 1 model per GPU
 
     # Ensure models directory exists
     if not os.path.exists('models'):

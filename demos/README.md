@@ -26,7 +26,7 @@ is ALF's workflow engine. See `../FOM_measurement` for that.
 ## Running Locally
 
     . ./venv/bin/activate
-    export PYTHONPATH=path/to/CAAR-Discovery/src
+    export "PYTHONPATH=path/to/CAAR-Discovery/src:$PYTHONPATH"
 
 This script can be run if the ALF-CAAR and hippynn-CAAR projects are installed
 in its environment. This configuration is suitable for local development,
@@ -38,7 +38,7 @@ the hippynn calculator.
 Activate the CAAR environment:
 
     source /lustre/orion/world-shared/csc728/messerlyra/scripts/load_caar_env.bash
-    export PYTHONPATH=path/to/CAAR-Discovery/src
+    export "PYTHONPATH=path/to/CAAR-Discovery/src:$PYTHONPATH"
 
 Grab an interactive node:
 
@@ -49,3 +49,16 @@ Run the steps:
     python run_sampler.py
     python run_teacher.py
     python run_training.py
+
+## Timing server
+
+Each parsl function is wrapped with a function that emits timing logs.
+If there is no log server, this prints harmless connection errors.
+You can get rid of these by running a timing server in the background during
+your runs,
+
+    python ../src/timing/timing_server.py --log timings.csv &
+    SERVER_PID=$!
+    trap 'kill $SERVER_PID' EXIT
+
+This has the nice side-effect of collecting per-step timings.

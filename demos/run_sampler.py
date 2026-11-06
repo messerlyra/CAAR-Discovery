@@ -10,7 +10,7 @@ import os
 import numpy as np
 from ase import Atoms
 from alframework.tools.molecules_class import MoleculesObject
-from custom_sampling import simple_mlmd_sampling_task
+from custom_sampler import simple_mlmd_sampling_task
 from tools import run_parsl, build_molecule
 
 def main():
