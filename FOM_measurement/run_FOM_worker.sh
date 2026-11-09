@@ -38,7 +38,9 @@ export ENVIRONMENT_SCRIPT="${ENVIRONMENT_SCRIPT:-/lustre/orion/world-shared/csc7
 
 # Start timing collector.
 # shellcheck disable=SC1090
-TIMING_LOG="$test_dir/timings.csv" source "$BASE_DIR/start_timing_server.sh"
+export TIMING_LOG="$test_dir/timings.csv"
+export TIMING_PORT=$((12810+NNODES_MD))
+source "$BASE_DIR/start_timing_server.sh"
 
 log_path="$test_dir/alf_FOM.log"
 
