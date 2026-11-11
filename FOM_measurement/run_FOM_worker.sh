@@ -61,10 +61,10 @@ failure=0
 failure=$?
 
 # Preserve cleanup of leftover ML Slurm jobs after sequential tests.
-job_name="ML_${NNODES_ML}nodes"
-mapfile -t job_ids < <(squeue -h -u "$USER" -n "$job_name" -o '%A')
-if (( ${#job_ids[@]} > 0 )); then
-    scancel "${job_ids[@]}"
-fi
+#job_name="ML_${NNODES_ML}nodes"
+#mapfile -t job_ids < <(squeue -h -u "$USER" -n "$job_name" -o '%A')
+#if (( ${#job_ids[@]} > 0 )); then
+#    scancel "${job_ids[@]}"
+#fi
 
 echo "FOM test $test_dir finished with status $failure"
