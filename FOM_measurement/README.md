@@ -74,13 +74,23 @@ This script calculates the FOM for a single ALF run. It extrapolates the origina
 python analyze_FOM.py --alf_path /path/to/test_dir [options]
 ```
 
-### Comparative Analysis (`compare_FOM.py`)
-This script aggregates results across multiple `nodes_*` directories to evaluate scaling. It compares the measured FOM against an ideal linear scaling model to determine efficiency.
+### Comparative Analysis (`calculate_results.py`)
+This script aggregates results gathered by `analyse_FOM.py` to evaluate scaling.
+It compares the measured FOM against an ideal linear scaling model to determine efficiency,
+then saves its output in a format `plot_results.py` can use.
 
 **Usage:**
 ```bash
-python compare_FOM.py --alf_path /path/to/FOM_runs --nodes 1 2 4 8 [options]
+python3 calculate_results.py [--results FOM_runs/results]
 ```
+
+### FOM visualization (`plot_results.py`)
+**Usage:**
+```bash
+python3 plot_results.py
+```
+
+Reads from `--results FOM_runs/results` and writes to `--figures-dir FOM_runs/figures` by default.
 
 ---
 
