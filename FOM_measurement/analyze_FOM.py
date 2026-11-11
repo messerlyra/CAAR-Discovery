@@ -156,7 +156,7 @@ def main():
     qm_time_original = t_qm_end - t_qm_start
     ml_time_original = t_ml_end - t_ml_start
     if min(md_time_original, qm_time_original, ml_time_original) < 0:
-        raise ValueError('Invalid timestamp order. Check the selected files.')
+        raise ValueError(f'Invalid timestamp order: MD {t_md_start}-{t_md_end} QM {t_qm_start}-{t_qm_end} ML {t_ml_start}-{t_ml_end}')
 
     avg_time_step, original_steps, num_trajectories = analyze_md_steps(sampling_dir)
     target_steps = round(args.md_duration * 1000 / args.timestep)
