@@ -26,8 +26,15 @@ export NNODES_MD=${nodes[0]}
 export NNODES_QM=${nodes[1]}
 export NNODES_ML=${nodes[2]}
 
+if [ $NNODES_MD -gt 16 ]; then
+	export WALLTIME_ML="0:30:00"
+fi
+if [ $NNODES_MD -gt 100 ]; then
+	export WALLTIME_ML="0:45:00"
+fi
 if [ $NNODES_MD -gt 300 ]; then
     export WALLTIME_MD="0:30:00"
+	export WALLTIME_ML="1:00:00"
 fi
 
 readonly BASE_DIR=$(dirname $(realpath "${BASH_SOURCE[0]}"))
