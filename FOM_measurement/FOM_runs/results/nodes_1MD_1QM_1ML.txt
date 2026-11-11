@@ -1,0 +1,75 @@
+
+ALF Workflow Timing Analysis
+==================================================
+
+ALF directory: /lustre/orion/csc728/proj-shared/rogersdd/CAAR-Discovery/FOM_measurement/FOM_runs/nodes_1MD_1QM_1ML
+
+Timestamps:
+  MD start    : 2026-11-06 20:28:26
+  MD end      : 2026-11-06 20:32:01
+  QM start    : 2026-11-06 21:03:07
+  QM end      : 2026-11-06 21:07:25
+  ML start    : 2026-11-06 22:08:06
+  ML end      : 2026-11-06 22:16:29
+
+MD Step Analysis:
+  Trajectories analyzed : 8
+  MD timestep           : 0.2500 fs
+  Target MD duration    : 100.0000 ps
+  Original MD steps     : 200
+  Target MD steps       : 400,000
+  Additional MD steps   : 399,800
+  Average time per step : 0.109341 s
+
+MD Timing Extrapolation:
+  Original MD time      : 00:03:35.00
+  Additional MD time    : 12:08:34.43
+  Extrapolated MD time  : 12:12:09.43
+
+QM Labeling Analysis:
+  MD trajectories       : 8
+  QM calculations       : 8
+  Completed QM          : 8
+  Required QM batches   : 1
+  Original QM time      : 00:04:18.00
+  Extrapolated QM calcs : 8
+  Extrapolated QM time  : 00:04:18.00
+
+ML Training Analysis:
+  Ensemble              : ensemble-0001
+  model-00              : 5 epochs, last epoch 1.4300 s
+  model-01              : 5 epochs, last epoch 1.5300 s
+  model-02              : 5 epochs, last epoch 1.4600 s
+  model-03              : 5 epochs, last epoch 1.2800 s
+  model-04              : 5 epochs, last epoch 1.6400 s
+  model-05              : 5 epochs, last epoch 1.3900 s
+  model-06              : 5 epochs, last epoch 1.7200 s
+  model-07              : 5 epochs, last epoch 1.3300 s
+  Original ML epochs    : 5
+  Target ML epochs      : 500
+  Additional ML epochs  : 495
+  Average epoch time    : 1.472500 s
+  Original ML time      : 00:08:23.00
+  Additional ML time    : 00:12:08.89
+  Extrapolated ML time  : 00:20:31.89
+
+Stage Durations:
+  MD Sampling : 12:12:09.43
+  QM Labeling : 00:04:18.00
+  ML Training : 00:20:31.89
+  -----------------------------------
+  Total       : 12:36:59.32
+
+Figure of Merit (FOM):
+  Total QM calculations : 8
+  Atoms per structure   : 200
+  Force components/atom : 3
+  Total force components: 4,800
+  Total time (hours)    : 12.616477
+  FOM (components/hour) : 380.45
+
+Time Distribution:
+  MD :  96.72%
+  QM :   0.57%
+  ML :   2.71%
+
