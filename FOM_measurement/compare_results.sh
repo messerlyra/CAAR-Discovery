@@ -27,6 +27,9 @@ for test_dir in $OUTPUT_ROOT/nodes_*; do
 	echo | tee -a "$comparison_log"
 done
 
+python3 calculate_results.py
+python3 plot_results.py
+
 #node_counts=($test_name $nnodes_md $nnodes_qm $nnodes_ml)
 #python -u "$BASE_DIR/compare_FOM.py" --alf_path "$OUTPUT_ROOT" --nodes "${node_counts[@]}" \
 #	--results-dir "$RESULTS_DIR" --figures-dir "$FIGURES_DIR" | tee -a $comparison_log

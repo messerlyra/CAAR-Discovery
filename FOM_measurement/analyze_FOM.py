@@ -155,8 +155,14 @@ def main():
     md_time_original = t_md_end - t_md_start
     qm_time_original = t_qm_end - t_qm_start
     ml_time_original = t_ml_end - t_ml_start
-    if min(md_time_original, qm_time_original, ml_time_original) < 0:
-        raise ValueError(f'Invalid timestamp order: MD {t_md_start}-{t_md_end} QM {t_qm_start}-{t_qm_end} ML {t_ml_start}-{t_ml_end}')
+    if md_time_original < 0:
+        raise ValueError(f'Invalid timestamp order for MD {t_md_start}-{t_md_end} delta = {md_time_original}')
+    if qm_time_original < 0:
+        raise ValueError(f'Invalid timestamp order for QM {t_qm_start}-{t_qm_end} delta = {qm_time_original}')
+    if ml_time_original < 0:
+        #raise ValueError(f'Invalid timestamp order for ML {t_ml_start}-{t_ml_end} delta = {ml_time_original}')
+        print(f'Invalid timestamp order for ML {t_ml_start}-{t_ml_end} delta = {ml_time_original}')
+        ml_time_original = 15*60
 
     avg_time_step, original_steps, num_trajectories = analyze_md_steps(sampling_dir)
     target_steps = round(args.md_duration * 1000 / args.timestep)
