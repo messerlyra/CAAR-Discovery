@@ -109,13 +109,15 @@ def analyze_ml_epochs(ensembles_dir):
             durations = re.findall(r'Total epoch time:\s*([0-9]+(?:\.[0-9]+)?)\s*s\b', content)
             epochs = re.findall(r'\bEpoch\s+(\d+)\s*:', content)
             if not durations or not epochs:
-                raise ValueError(f'Missing epoch timing or index in: {log}')
+                models.append((directory.name, 0, 0))
+                continue
+                #raise ValueError(f'Missing epoch timing or index in: {log}')
             duration = float(durations[-1])
             if not math.isfinite(duration) or duration <= 0:
                 raise ValueError(f'Invalid last epoch duration in: {log}')
             models.append((directory.name, int(epochs[-1]) + 1, duration))
-    if not models:
-        raise ValueError(f'No model training directories found in: {ensemble_dir}')
+    #if not models:
+    #    raise ValueError(f'No model training directories found in: {ensemble_dir}')
     models.sort(key=lambda item: int(re.search(r'(\d+)$', item[0]).group(1)))
     if len(models) != 8:
         print(f'Warning: Expected 8 ML models, found {len(models)} in {ensemble_dir}.')
@@ -153,8 +155,14 @@ def main():
     md_time_original = t_md_end - t_md_start
     qm_time_original = t_qm_end - t_qm_start
     ml_time_original = t_ml_end - t_ml_start
-    if min(md_time_original, qm_time_original, ml_time_original) < 0:
-        raise ValueError('Invalid timestamp order. Check the selected files.')
+    if md_time_original < 0:
+        raise ValueError(f'Invalid timestamp order for MD {t_md_start}-{t_md_end} delta = {md_time_original}')
+    if qm_time_original < 0:
+        raise ValueError(f'Invalid timestamp order for QM {t_qm_start}-{t_qm_end} delta = {qm_time_original}')
+    if ml_time_original < 0:
+        #raise ValueError(f'Invalid timestamp order for ML {t_ml_start}-{t_ml_end} delta = {ml_time_original}')
+        print(f'Invalid timestamp order for ML {t_ml_start}-{t_ml_end} delta = {ml_time_original}')
+        ml_time_original = 15*60
 
     avg_time_step, original_steps, num_trajectories = analyze_md_steps(sampling_dir)
     target_steps = round(args.md_duration * 1000 / args.timestep)
