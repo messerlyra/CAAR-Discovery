@@ -1,0 +1,76 @@
+WARNING: Extrapolated QM calculations (336) exceed MD trajectories (256). Limiting QM calculations to 256.
+
+ALF Workflow Timing Analysis
+==================================================
+
+ALF directory: /lustre/orion/csc728/proj-shared/rogersdd/CAAR-Discovery/FOM_measurement/FOM_runs/nodes_32MD_32QM_1ML
+
+Timestamps:
+  MD start    : 2026-11-09 10:42:42
+  MD end      : 2026-11-09 10:46:07
+  QM start    : 2026-11-09 12:17:43
+  QM end      : 2026-11-09 12:30:52
+  ML start    : 2026-11-09 12:32:37
+  ML end      : 2026-11-09 12:43:21
+
+MD Step Analysis:
+  Trajectories analyzed : 256
+  MD timestep           : 0.2500 fs
+  Target MD duration    : 100.0000 ps
+  Original MD steps     : 200
+  Target MD steps       : 400,000
+  Additional MD steps   : 399,800
+  Average time per step : 0.109595 s
+
+MD Timing Extrapolation:
+  Original MD time      : 00:03:25.00
+  Additional MD time    : 12:10:16.18
+  Extrapolated MD time  : 12:13:41.18
+
+QM Labeling Analysis:
+  MD trajectories       : 256
+  QM calculations       : 256
+  Completed QM          : 168
+  Required QM batches   : 2
+  Original QM time      : 00:13:09.00
+  Extrapolated QM calcs : 256
+  Extrapolated QM time  : 00:26:18.00
+
+ML Training Analysis:
+  Ensemble              : ensemble-0001
+  model-00              : 0 epochs, last epoch 0.0000 s
+  model-01              : 0 epochs, last epoch 0.0000 s
+  model-02              : 0 epochs, last epoch 0.0000 s
+  model-03              : 0 epochs, last epoch 0.0000 s
+  model-04              : 0 epochs, last epoch 0.0000 s
+  model-05              : 0 epochs, last epoch 0.0000 s
+  model-06              : 0 epochs, last epoch 0.0000 s
+  model-07              : 0 epochs, last epoch 0.0000 s
+  Original ML epochs    : 0
+  Target ML epochs      : 500
+  Additional ML epochs  : 500
+  Average epoch time    : 0.000000 s
+  Original ML time      : 00:10:44.00
+  Additional ML time    : 00:00:00.00
+  Extrapolated ML time  : 00:10:44.00
+
+Stage Durations:
+  MD Sampling : 12:13:41.18
+  QM Labeling : 00:26:18.00
+  ML Training : 00:10:44.00
+  -----------------------------------
+  Total       : 12:50:43.18
+
+Figure of Merit (FOM):
+  Total QM calculations : 256
+  Atoms per structure   : 200
+  Force components/atom : 3
+  Total force components: 153,600
+  Total time (hours)    : 12.845328
+  FOM (components/hour) : 11,957.66
+
+Time Distribution:
+  MD :  95.19%
+  QM :   3.41%
+  ML :   1.39%
+
